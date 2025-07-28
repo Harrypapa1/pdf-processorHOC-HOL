@@ -1,4 +1,45 @@
-<!DOCTYPE html>
+// Process PDF files
+        async function processFiles(files) {
+            console.log('Processing files:', files.map(f => f.name));
+            
+            document.getElementById('processingSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            
+            processedOrders = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                updateProgress((i / files.length) * 100, `Processing ${file.name}...`);
+                
+                try {
+                    console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
+                    const order = await processPDF(file);
+                    console.log('processPDF returned:', order);
+                    
+                    if (order) {
+                        processedOrders.push(order);
+                        console.log('Successfully processed:', file.name);
+                        console.log('Current processedOrders:', processedOrders);
+                    } else {
+                        console.log('No order data extracted from:', file.name);
+                    }
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    alert(`Error processing ${file.name}: ${error.message}`);
+                }
+            }
+            
+            console.log('Final processedOrders array:', processedOrders);
+            console.log('About to update progress to 100% and call displayResults');
+            
+            updateProgress(100, 'Processing complete!');
+            
+            setTimeout(() => {
+                console.log('Hiding processing section, calling displayResults');
+                document.getElementById('processingSection').style.display = 'none';
+                displayResults();
+            }, 1000);
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -557,6 +598,43 @@
         function init() {
             initializeMappings();
             setupEventListeners();
+            
+            // Add a test button for debugging
+            const testButton = document.createElement('button');
+            testButton.textContent = '🧪 Test Results Display';
+            testButton.className = 'btn';
+            testButton.style.margin = '10px';
+            testButton.onclick = function() {
+                console.log('Test button clicked');
+                // Create test data
+                processedOrders = [{
+                    filename: 'test.pdf',
+                    type: 'Consolidated',
+                    customerCode: '92TABLE',
+                    customerName: 'The Table Kitchen',
+                    poNumber: 'TEST123',
+                    orderDate: '25/07/2025',
+                    deliveryDate: '28/07/2025',
+                    products: [
+                        {
+                            quantity: 2,
+                            description: 'CAULIFLOWER',
+                            productCode: 'CAU',
+                            caseSize: '1xEach',
+                            unitPrice: 1.75,
+                            netPrice: 3.50
+                        }
+                    ],
+                    total: 3.50
+                }];
+                displayResults();
+            };
+            
+            // Add test button to upload area
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.appendChild(testButton);
+            
+            console.log('App initialized successfully');
         }
         
         // Setup event listeners
@@ -1480,7 +1558,7 @@
             const wb = XLSX.utils.book_new();
             const wsData = [];
             
-            // Add header row (79 columns from your example)
+            // Add header row - exact format from your example
             const headers = [
                 "Name", "Email", "Financial Status", "Paid at", "Fulfillment Status", "Fulfilled at",
                 "Accepts Marketing", "Currency", "Subtotal", "Shipping", "Taxes", "Total", 
@@ -1500,36 +1578,98 @@
             ];
             wsData.push(headers);
             
-            // Add data rows
+            // Add data rows - matching your example format exactly
             processedOrders.forEach(order => {
                 order.products.forEach((product, productIndex) => {
-                    const row = new Array(79).fill(null);
+                    const row = new Array(79).fill(""); // Fill with empty strings, not null
                     
-                    // Fill in the data we have
-                    row[0] = customerMappings.get(order.customerCode) || order.customerCode; // Name (customer code)
-                    row[1] = ""; // Email - would need to extract from original email
+                    // Generate order ID (like WF36497)
+                    const orderId = `WF${Math.floor(Math.random() * 90000) + 10000}`;
+                    
+                    // Fill data exactly like your example
+                    row[0] = orderId; // Name - order ID like "WF36497"
+                    row[1] = ""; // Email - empty for now
                     row[2] = "pending"; // Financial Status
+                    row[3] = ""; // Paid at - empty
                     row[4] = "fulfilled"; // Fulfillment Status
-                    row[5] = order.deliveryDate; // Fulfilled at
+                    row[5] = productIndex === 0 ? `${order.deliveryDate.split('/').reverse().join('-')} 21:21:42 +0100` : ""; // Fulfilled at - timestamp format, first row only
                     row[6] = "yes"; // Accepts Marketing
                     row[7] = "GBP"; // Currency
-                    row[8] = productIndex === 0 ? order.total : null; // Subtotal (only on first item)
-                    row[9] = 0; // Shipping
-                    row[10] = 0; // Taxes
-                    row[11] = productIndex === 0 ? order.total : null; // Total (only on first item)
-                    row[15] = order.orderDate; // Created at
+                    row[8] = productIndex === 0 ? order.total : ""; // Subtotal - first row only
+                    row[9] = productIndex === 0 ? 0 : ""; // Shipping - first row only
+                    row[10] = productIndex === 0 ? 0 : ""; // Taxes - first row only
+                    row[11] = productIndex === 0 ? order.total : ""; // Total - first row only
+                    row[12] = ""; // Discount Code
+                    row[13] = ""; // Discount Amount
+                    row[14] = productIndex === 0 ? "FREE DELIVERY" : ""; // Shipping Method - first row only
+                    row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at - timestamp format
                     row[16] = product.quantity; // Lineitem quantity
                     row[17] = product.description; // Lineitem name
                     row[18] = product.unitPrice; // Lineitem price
-                    row[20] = product.productCode; // Lineitem sku (use original code: CAU, CEL, GRBS, POSW)
-                    row[21] = true; // Lineitem requires shipping
-                    row[22] = false; // Lineitem taxable
+                    row[19] = ""; // Lineitem compare at price
+                    row[20] = product.productCode; // Lineitem sku - original code (CAU, CEL, GRBS, etc.)
+                    row[21] = "TRUE"; // Lineitem requires shipping
+                    row[22] = "FALSE"; // Lineitem taxable
                     row[23] = "fulfilled"; // Lineitem fulfillment status
-                    row[44] = `PO: ${order.poNumber}`; // Notes
-                    row[48] = order.poNumber; // Payment Reference (PO Number)
-                    row[54] = order.poNumber; // Id (using PO number)
+                    
+                    // Billing/Shipping info - first row only
+                    if (productIndex === 0) {
+                        const customerName = customerMappings.get(order.customerCode) || order.customerName;
+                        row[24] = `${customerName} (${order.customerCode})`; // Billing Name
+                        row[25] = "Address Line 1"; // Billing Street
+                        row[26] = "Address Line 1"; // Billing Address1
+                        row[27] = ""; // Billing Address2
+                        row[28] = ""; // Billing Company
+                        row[29] = "London"; // Billing City
+                        row[30] = "SW1A 0AA"; // Billing Zip
+                        row[31] = "ENG"; // Billing Province
+                        row[32] = "GB"; // Billing Country
+                        row[33] = ""; // Billing Phone
+                        
+                        // Shipping same as billing
+                        row[34] = row[24]; // Shipping Name
+                        row[35] = row[25]; // Shipping Street
+                        row[36] = row[26]; // Shipping Address1
+                        row[37] = ""; // Shipping Address2
+                        row[38] = ""; // Shipping Company
+                        row[39] = row[29]; // Shipping City
+                        row[40] = row[30]; // Shipping Zip
+                        row[41] = "ENG"; // Shipping Province
+                        row[42] = "GB"; // Shipping Country
+                        row[43] = ""; // Shipping Phone
+                    }
+                    
+                    row[44] = productIndex === 0 ? "" : `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Notes - empty first row, delivery date others
+                    row[45] = order.deliveryDate; // Note Attributes - Column AT with delivery date (as requested)
+                    row[46] = ""; // Cancelled at
+                    row[47] = "custom"; // Payment Method
+                    row[48] = ""; // Payment Reference
+                    row[49] = "0"; // Refunded Amount
+                    row[50] = "Osolocal2U"; // Vendor
+                    row[51] = productIndex === 0 ? order.total : ""; // Outstanding Balance - first row only
+                    row[52] = ""; // Employee
+                    row[53] = "Unit 2 Horner House"; // Location
+                    row[54] = ""; // Device ID
+                    row[55] = `1.207${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}E+13`; // Id - timestamp-like number
+                    row[56] = "checkout-by-draft"; // Tags
                     row[57] = "Low"; // Risk Level
-                    row[58] = "email_import"; // Source
+                    row[58] = "shopify_draft_order"; // Source
+                    row[59] = ""; // Lineitem discount
+                    
+                    // Tax columns (60-69) - all empty
+                    for (let i = 60; i <= 69; i++) {
+                        row[i] = "";
+                    }
+                    
+                    row[70] = ""; // Phone
+                    row[71] = ""; // Receipt Number
+                    row[72] = ""; // Duties
+                    row[73] = "England"; // Billing Province Name
+                    row[74] = "England"; // Shipping Province Name
+                    row[75] = ""; // Payment ID
+                    row[76] = ""; // Payment Terms Name
+                    row[77] = ""; // Next Payment Due At
+                    row[78] = ""; // Payment References
                     
                     wsData.push(row);
                 });
