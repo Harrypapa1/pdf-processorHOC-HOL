@@ -1,45 +1,4 @@
-// Process PDF files
-        async function processFiles(files) {
-            console.log('Processing files:', files.map(f => f.name));
-            
-            document.getElementById('processingSection').style.display = 'block';
-            document.getElementById('resultsSection').style.display = 'none';
-            
-            processedOrders = [];
-            
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                updateProgress((i / files.length) * 100, `Processing ${file.name}...`);
-                
-                try {
-                    console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
-                    const order = await processPDF(file);
-                    console.log('processPDF returned:', order);
-                    
-                    if (order) {
-                        processedOrders.push(order);
-                        console.log('Successfully processed:', file.name);
-                        console.log('Current processedOrders:', processedOrders);
-                    } else {
-                        console.log('No order data extracted from:', file.name);
-                    }
-                } catch (error) {
-                    console.error(`Error processing ${file.name}:`, error);
-                    alert(`Error processing ${file.name}: ${error.message}`);
-                }
-            }
-            
-            console.log('Final processedOrders array:', processedOrders);
-            console.log('About to update progress to 100% and call displayResults');
-            
-            updateProgress(100, 'Processing complete!');
-            
-            setTimeout(() => {
-                console.log('Hiding processing section, calling displayResults');
-                document.getElementById('processingSection').style.display = 'none';
-                displayResults();
-            }, 1000);
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -206,221 +165,6 @@
             font-size: 0.9rem;
         }
         
-        /* Human-in-the-Loop Approval Styles */
-        .approval-section {
-            display: none;
-            margin: 30px 0;
-            background: #f8fafc;
-            border-radius: 15px;
-            padding: 30px;
-        }
-        
-        .approval-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .approval-header h2 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        
-        .approval-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-        
-        .approval-stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .approval-stat-number {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .approval-category {
-            margin: 25px 0;
-        }
-        
-        .category-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #e9ecef;
-            border-radius: 8px;
-        }
-        
-        .category-header h3 {
-            margin-left: 10px;
-            color: #2c3e50;
-        }
-        
-        .mapping-item {
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 15px 0;
-            transition: all 0.3s ease;
-        }
-        
-        .mapping-item.auto-approved {
-            border-color: #28a745;
-            background: #f8fff9;
-            opacity: 0.9;
-        }
-        
-        .mapping-item.needs-approval {
-            border-color: #ffc107;
-            background: #fffdf0;
-        }
-        
-        .mapping-item.dangerous {
-            border-color: #dc3545;
-            background: #fff5f5;
-        }
-        
-        .mapping-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .mapping-flow {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 1.1rem;
-        }
-        
-        .original-code {
-            background: #e9ecef;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-weight: bold;
-        }
-        
-        .arrow {
-            font-size: 1.5rem;
-            color: #6c757d;
-        }
-        
-        .suggested-mapping {
-            background: #d4edda;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            color: #155724;
-        }
-        
-        .confidence-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-        
-        .confidence-high { background: #d4edda; color: #155724; }
-        .confidence-medium { background: #fff3cd; color: #856404; }
-        .confidence-low { background: #f8d7da; color: #721c24; }
-        
-        .reasoning {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            color: #6c757d;
-            margin: 10px 0;
-        }
-        
-        .mapping-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .btn-approve {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-edit {
-            background: #ffc107;
-            color: #212529;
-        }
-        
-        .btn-reject {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-alt {
-            background: #6f42c1;
-            color: white;
-        }
-        
-        .warning-box {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 15px 0;
-            color: #856404;
-        }
-        
-        .warning-box strong {
-            color: #d63031;
-        }
-        
-        .edit-mapping {
-            display: none;
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-        
-        .edit-mapping input {
-            padding: 8px 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 4px;
-            margin: 0 10px;
-            min-width: 200px;
-        }
-        
-        .bulk-actions {
-            background: #e9ecef;
-            padding: 25px;
-            border-radius: 10px;
-            text-align: center;
-            margin-top: 30px;
-        }
-        
-        .bulk-actions h3 {
-            margin-bottom: 15px;
-            color: #2c3e50;
-        }
-        
-        .btn-bulk {
-            font-size: 1.1rem;
-            padding: 15px 30px;
-            margin: 10px;
-        }
-        
         .order-card {
             background: white;
             border-radius: 15px;
@@ -472,17 +216,6 @@
             color: #2c3e50;
         }
         
-        .status {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        
-        .status-success { background: #d4edda; color: #155724; }
-        .status-warning { background: #fff3cd; color: #856404; }
-        .status-error { background: #f8d7da; color: #721c24; }
-        
         .export-section {
             background: #e8f5e8;
             border-radius: 15px;
@@ -504,7 +237,7 @@
     <div class="container">
         <div class="header">
             <h1>📧 Email Order Processing</h1>
-            <p>Transform PDF orders into Excel files for Freshware - Now with Smart Learning!</p>
+            <p>Transform PDF orders into Excel files for Freshware</p>
         </div>
         
         <div class="main-content">
@@ -529,8 +262,6 @@
                 </div>
                 <p id="processingStatus">Initializing...</p>
             </div>
-            
-            <!-- Human-in-the-Loop Approval Section - REMOVED FOR NOW -->
             
             <div class="results-section" id="resultsSection">
                 <div class="stats-grid" id="statsGrid">
@@ -558,7 +289,7 @@
                 <div class="export-section">
                     <h3>📊 Ready to Export</h3>
                     <p>All orders have been processed and are ready for Freshware import</p>
-                    <button class="btn btn-success" id="exportBtn" onclick="exportToExcel()">
+                    <button class="btn btn-success" onclick="exportToExcel()">
                         Download Excel File
                     </button>
                 </div>
@@ -574,13 +305,13 @@
         
         // Initialize known mappings
         function initializeMappings() {
-            // Customer mappings (you can extend these)
+            // Customer mappings
             customerMappings.set('07BELLA', 'BELLA_KITCHEN');
             customerMappings.set('13RREST', 'RIVER_KITCHEN');
             customerMappings.set('92TABLE', 'TABLE_KITCHEN');
             customerMappings.set('76RICH', 'RICHMOND_HOUSE');
             
-            // Product mappings (you can extend these) - these are just for display, SKU codes use original
+            // Product mappings
             productMappings.set('AVO', 'AVOCADO_PEAR');
             productMappings.set('KI', 'KIWI_FRUIT');
             productMappings.set('PINL', 'PINEAPPLE_LARGE');
@@ -598,42 +329,6 @@
         function init() {
             initializeMappings();
             setupEventListeners();
-            
-            // Add a test button for debugging
-            const testButton = document.createElement('button');
-            testButton.textContent = '🧪 Test Results Display';
-            testButton.className = 'btn';
-            testButton.style.margin = '10px';
-            testButton.onclick = function() {
-                console.log('Test button clicked');
-                // Create test data
-                processedOrders = [{
-                    filename: 'test.pdf',
-                    type: 'Consolidated',
-                    customerCode: '92TABLE',
-                    customerName: 'The Table Kitchen',
-                    poNumber: 'TEST123',
-                    orderDate: '25/07/2025',
-                    deliveryDate: '28/07/2025',
-                    products: [
-                        {
-                            quantity: 2,
-                            description: 'CAULIFLOWER',
-                            productCode: 'CAU',
-                            caseSize: '1xEach',
-                            unitPrice: 1.75,
-                            netPrice: 3.50
-                        }
-                    ],
-                    total: 3.50
-                }];
-                displayResults();
-            };
-            
-            // Add test button to upload area
-            const uploadArea = document.getElementById('uploadArea');
-            uploadArea.appendChild(testButton);
-            
             console.log('App initialized successfully');
         }
         
@@ -645,19 +340,17 @@
             // File input change
             fileInput.addEventListener('change', handleFiles);
             
-            // Drag and drop - with debugging
+            // Drag and drop
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 uploadArea.classList.add('dragover');
-                console.log('Drag over detected');
             });
             
             uploadArea.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 uploadArea.classList.remove('dragover');
-                console.log('Drag leave detected');
             });
             
             uploadArea.addEventListener('drop', (e) => {
@@ -665,54 +358,36 @@
                 e.stopPropagation();
                 uploadArea.classList.remove('dragover');
                 
-                console.log('Drop detected', e.dataTransfer.files);
-                
                 const files = Array.from(e.dataTransfer.files);
-                console.log('All files:', files.map(f => f.name + ' (' + f.type + ')'));
-                
-                // Filter for PDFs - be more lenient with file type detection
                 const pdfFiles = files.filter(f => 
                     f.type === 'application/pdf' || 
                     f.name.toLowerCase().endsWith('.pdf')
                 );
                 
-                console.log('PDF files found:', pdfFiles.length);
-                
                 if (pdfFiles.length > 0) {
                     processFiles(pdfFiles);
                 } else {
-                    alert('Please drop PDF files only. Found: ' + files.map(f => f.name).join(', '));
+                    alert('Please drop PDF files only.');
                 }
             });
             
-            // Also add click handler for the upload area
             uploadArea.addEventListener('click', (e) => {
-                // Don't trigger if clicking the button
                 if (!e.target.closest('button')) {
                     fileInput.click();
                 }
             });
-            
-            console.log('Event listeners set up successfully');
         }
         
         // Handle file selection
         function handleFiles(event) {
-            console.log('Handle files called', event);
             const files = Array.from(event.target.files);
-            console.log('Files selected:', files.map(f => f.name));
-            
             if (files.length > 0) {
                 processFiles(files);
-            } else {
-                console.log('No files selected');
             }
         }
         
         // Process PDF files
         async function processFiles(files) {
-            console.log('Processing files:', files.map(f => f.name));
-            
             document.getElementById('processingSection').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
             
@@ -723,13 +398,9 @@
                 updateProgress((i / files.length) * 100, `Processing ${file.name}...`);
                 
                 try {
-                    console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
                     const order = await processPDF(file);
                     if (order) {
                         processedOrders.push(order);
-                        console.log('Successfully processed:', file.name);
-                    } else {
-                        console.log('No order data extracted from:', file.name);
                     }
                 } catch (error) {
                     console.error(`Error processing ${file.name}:`, error);
@@ -754,7 +425,6 @@
                 
                 // Extract text from PDF
                 const text = textContent.items.map(item => item.str).join(' ');
-                console.log('Extracted PDF text:', text); // Debug log
                 
                 // Determine template type and parse
                 const isConsolidated = text.includes('Consolidated Purchase Order');
@@ -770,7 +440,7 @@
             }
         }
         
-        // Parse consolidated order template (like your House of Commons PDF)
+        // Parse consolidated order template
         function parseConsolidatedOrder(text, filename) {
             const order = {
                 filename: filename,
@@ -784,7 +454,7 @@
                 total: 0
             };
             
-            // Extract PO Number - more flexible patterns
+            // Extract PO Number
             const poPatterns = [
                 /PO Number:\s*([A-Z0-9]+)/i,
                 /Purchase Order[^:]*:\s*([A-Z0-9]+)/i,
@@ -799,7 +469,7 @@
                 }
             }
             
-            // Extract dates - multiple formats
+            // Extract dates
             const orderDatePatterns = [
                 /Order Date:\s*(\d{2}\/\d{2}\/\d{4})/,
                 /Date:\s*(\d{2}\/\d{2}\/\d{4})/
@@ -826,7 +496,7 @@
                 }
             }
             
-            // Extract customer info - flexible patterns for your format
+            // Extract customer info
             const customerPatterns = [
                 /following outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
                 /outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
@@ -842,12 +512,9 @@
                 }
             }
             
-            // Extract products - Enhanced pattern for your format
-            // Looking for: Qty Description Code CaseSize UnitPrice Net
+            // Extract products
             const productPatterns = [
-                // Pattern for: 2.00 CAULIFLOWER CAU 1xEach 1.75 3.50
                 /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x[A-Za-z]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g,
-                // Backup pattern
                 /(\d+\.?\d*)\s+([A-Z][A-Z\s]+?)\s+([A-Z]{2,5})\s+([^\d]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g
             ];
             
@@ -863,14 +530,12 @@
                         netPrice: parseFloat(match[6])
                     };
                     
-                    // Validate the extracted data
                     if (product.quantity > 0 && product.productCode && product.unitPrice > 0) {
                         order.products.push(product);
                         order.total += product.netPrice;
                     }
                 }
                 
-                // If we found products, break
                 if (order.products.length > 0) break;
             }
             
@@ -890,7 +555,6 @@
                 }
             }
             
-            console.log('Parsed consolidated order:', order); // Debug log
             return order;
         }
         
@@ -927,7 +591,7 @@
             const deliverMatch = text.match(/Deliver To\s+([^\n]+)/);
             if (deliverMatch) order.customerName = deliverMatch[1].trim();
             
-            // Extract products table (same pattern as consolidated)
+            // Extract products table
             const tablePattern = /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x\w+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g;
             let match;
             
@@ -944,7 +608,6 @@
                 order.total += product.netPrice;
             }
             
-            console.log('Parsed standard order:', order); // Debug log
             return order;
         }
         
@@ -954,135 +617,14 @@
             document.getElementById('processingStatus').textContent = status;
         }
         
-        // Human-in-the-Loop Processing Functions
-        function processProductForApproval(product, order) {
-            const productCode = product.productCode;
-            const existingMapping = productMappings.get(productCode);
-            
-            // Get base confidence from existing mappings
-            let baseConfidence = existingMapping ? 0.9 : 0.3;
-            
-            // Apply learned corrections
-            const correctionKey = `product:${productCode}`;
-            const learnedConfidence = confidenceScores.get(correctionKey) || 0;
-            baseConfidence += (learnedConfidence * 0.1); // Each learned correction adds 10%
-            
-            // Get business rule validation
-            const validation = businessRules.validateMapping(
-                productCode, 
-                existingMapping,
-                {
-                    unitPrice: product.unitPrice,
-                    customer: order.customerCode,
-                    description: product.description
-                }
-            );
-            
-            const finalConfidence = Math.min(baseConfidence * validation.confidence, 1.0);
-            
-            const approvalItem = {
-                orderId: order.poNumber,
-                product: product,
-                originalCode: productCode,
-                suggestedMapping: existingMapping || `UNKNOWN_${productCode}`,
-                confidence: finalConfidence,
-                category: validation.category,
-                requiresHuman: validation.requiresHumanValidation,
-                reasoning: generateReasoning(product, existingMapping, validation, finalConfidence),
-                warnings: validation.warnings,
-                approved: false,
-                finalMapping: null
-            };
-            
-            return approvalItem;
-        }
-        
-        function generateReasoning(product, mapping, validation, confidence) {
-            const reasons = [];
-            
-            if (mapping) {
-                reasons.push("✓ Found in database");
-            } else {
-                reasons.push("⚠ New product code");
-            }
-            
-            if (confidence > 0.9) {
-                reasons.push("✓ High confidence match");
-            } else if (confidence > 0.7) {
-                reasons.push("⚠ Medium confidence");
-            } else {
-                reasons.push("⚠ Low confidence");
-            }
-            
-            if (validation.warnings.length === 0) {
-                reasons.push("✓ No warnings");
-            }
-            
-            reasons.push(...validation.warnings);
-            
-            return reasons.join(" • ");
-        }
-        
-        function categorizeApprovals(approvalItems) {
-            const categories = {
-                autoApprove: [],
-                needsApproval: [],
-                needsAttention: []
-            };
-            
-            let totalConfidence = 0;
-            
-            approvalItems.forEach(item => {
-                totalConfidence += item.confidence;
-                
-                switch(item.category) {
-                    case 'auto_approve':
-                        categories.autoApprove.push(item);
-                        item.approved = true; // Auto-approve high confidence items
-                        item.finalMapping = item.suggestedMapping;
-                        break;
-                    case 'needs_approval':
-                        categories.needsApproval.push(item);
-                        break;
-                    case 'needs_attention':
-                        categories.needsAttention.push(item);
-                        break;
-                }
-            });
-            
-            // Update stats
-            approvalStats = {
-                autoApproved: categories.autoApprove.length,
-                needsApproval: categories.needsApproval.length,
-                needsAttention: categories.needsAttention.length,
-                avgConfidence: approvalItems.length > 0 ? Math.round((totalConfidence / approvalItems.length) * 100) : 0
-            };
-            
-            return categories;
-        }
-        
-        // Display processing results directly (no approval needed)
+        // Display processing results
         function displayResults() {
-            console.log('displayResults called with orders:', processedOrders);
-            
             const resultsSection = document.getElementById('resultsSection');
             const ordersContainer = document.getElementById('ordersContainer');
-            
-            if (!resultsSection) {
-                console.error('Results section not found!');
-                return;
-            }
-            
-            if (!ordersContainer) {
-                console.error('Orders container not found!');
-                return;
-            }
             
             // Update stats
             const totalProducts = processedOrders.reduce((sum, order) => sum + order.products.length, 0);
             const totalValue = processedOrders.reduce((sum, order) => sum + order.total, 0);
-            
-            console.log('Stats calculated:', {totalProducts, totalValue});
             
             document.getElementById('totalOrders').textContent = processedOrders.length;
             document.getElementById('totalProducts').textContent = totalProducts;
@@ -1094,24 +636,15 @@
             
             // Display each order
             processedOrders.forEach((order, index) => {
-                console.log(`Creating card for order ${index}:`, order);
-                try {
-                    const orderCard = createOrderCard(order, index);
-                    ordersContainer.appendChild(orderCard);
-                    console.log(`Successfully added order card ${index}`);
-                } catch (error) {
-                    console.error(`Error creating order card ${index}:`, error);
-                }
+                const orderCard = createOrderCard(order, index);
+                ordersContainer.appendChild(orderCard);
             });
             
-            console.log('Showing results section');
             resultsSection.style.display = 'block';
-            
-            // Force scroll to results
             resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
         
-        // Create order card HTML (simplified - no approval status)
+        // Create order card HTML
         function createOrderCard(order, index) {
             const card = document.createElement('div');
             card.className = 'order-card';
@@ -1124,7 +657,7 @@
                     <div class="order-meta">
                         <div><strong>Type:</strong> ${order.type}</div>
                         <div><strong>PO Number:</strong> ${order.poNumber}</div>
-                        <div><strong>Customer:</strong> ${order.customerName} (${order.customerCode})</div>
+                        <div><strong>Customer:</strong> ${order.customerName} (${order.customerCode} → ${customerMapping})</div>
                         <div><strong>Order Date:</strong> ${order.orderDate}</div>
                         <div><strong>Delivery Date:</strong> ${order.deliveryDate}</div>
                         <div><strong>Total:</strong> £${order.total.toFixed(2)}</div>
@@ -1164,401 +697,12 @@
             return card;
         }
         
-        // UI Functions for Approval Interface
-        function showApprovalInterface(approvalItems) {
-            const categories = categorizeApprovals(approvalItems);
-            
-            // Update stats
-            document.getElementById('autoApprovedCount').textContent = approvalStats.autoApproved;
-            document.getElementById('needsApprovalCount').textContent = approvalStats.needsApproval;
-            document.getElementById('needsAttentionCount').textContent = approvalStats.needsAttention;
-            document.getElementById('avgConfidence').textContent = approvalStats.avgConfidence + '%';
-            
-            // Show categories
-            if (categories.autoApprove.length > 0) {
-                showApprovalCategory('autoApprovedCategory', 'autoApprovedItems', categories.autoApprove);
-            }
-            
-            if (categories.needsApproval.length > 0) {
-                showApprovalCategory('needsApprovalCategory', 'needsApprovalItems', categories.needsApproval);
-            }
-            
-            if (categories.needsAttention.length > 0) {
-                showApprovalCategory('needsAttentionCategory', 'needsAttentionItems', categories.needsAttention);
-            }
-            
-            updateApprovalSummary();
-            document.getElementById('approvalSection').style.display = 'block';
-        }
-        
-        function showApprovalCategory(categoryId, itemsId, items) {
-            document.getElementById(categoryId).style.display = 'block';
-            const container = document.getElementById(itemsId);
-            container.innerHTML = '';
-            
-            items.forEach((item, index) => {
-                const itemElement = createApprovalItem(item, index);
-                container.appendChild(itemElement);
-            });
-        }
-        
-        function createApprovalItem(item, index) {
-            const div = document.createElement('div');
-            const itemId = `approval-${item.originalCode}-${index}`;
-            
-            let categoryClass = 'mapping-item';
-            let confidenceClass = 'confidence-medium';
-            
-            if (item.category === 'auto_approve') {
-                categoryClass += ' auto-approved';
-                confidenceClass = 'confidence-high';
-            } else if (item.category === 'needs_attention') {
-                categoryClass += ' dangerous';
-                confidenceClass = 'confidence-low';
-            } else {
-                categoryClass += ' needs-approval';
-            }
-            
-            const confidencePercent = Math.round(item.confidence * 100);
-            
-            div.className = categoryClass;
-            div.innerHTML = `
-                <div class="mapping-header">
-                    <div class="mapping-flow">
-                        <span class="original-code">${item.originalCode}</span>
-                        <span class="arrow">→</span>
-                        <span class="suggested-mapping">${item.suggestedMapping}</span>
-                    </div>
-                    <span class="confidence-badge ${confidenceClass}">${confidencePercent}% Confidence</span>
-                </div>
-                
-                ${item.warnings.length > 0 ? `
-                    <div class="warning-box">
-                        <strong>⚠️ ATTENTION:</strong> ${item.warnings.join(' • ')}
-                    </div>
-                ` : ''}
-                
-                <div class="reasoning">${item.reasoning}</div>
-                
-                ${item.category !== 'auto_approve' ? generateApprovalActions(item, itemId) : ''}
-                
-                <div class="edit-mapping" id="${itemId}-edit">
-                    <strong>Manual mapping for ${item.originalCode}:</strong>
-                    <input type="text" id="${itemId}-input" placeholder="Enter correct mapping" value="${item.suggestedMapping}">
-                    <button class="btn btn-approve" onclick="saveCustomMapping('${itemId}', '${item.originalCode}')">Save</button>
-                    <button class="btn" onclick="cancelEdit('${itemId}-edit')" style="background: #6c757d; color: white;">Cancel</button>
-                </div>
-            `;
-            
-            return div;
-        }
-        
-        function generateApprovalActions(item, itemId) {
-            let actions = `<div class="mapping-actions">`;
-            
-            if (item.originalCode === 'GRBS') {
-                // Special case for GRBS/GRWS confusion
-                actions += `
-                    <button class="btn btn-approve" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_BLACK')">✅ Black Grapes</button>
-                    <button class="btn btn-alt" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_WHITE')">🍇 White Grapes</button>
-                    <button class="btn btn-edit" onclick="showEdit('${itemId}-edit')">✏️ Something Else</button>
-                `;
-            } else if (item.originalCode === 'GRWS') {
-                actions += `
-                    <button class="btn btn-approve" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_WHITE')">✅ White Grapes</button>
-                    <button class="btn btn-alt" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_BLACK')">🍇 Black Grapes</button>
-                    <button class="btn btn-edit" onclick="showEdit('${itemId}-edit')">✏️ Something Else</button>
-                `;
-            } else {
-                actions += `
-                    <button class="btn btn-approve" onclick="approveMapping('${itemId}', '${item.originalCode}', '${item.suggestedMapping}')">✅ Approve</button>
-                    <button class="btn btn-edit" onclick="showEdit('${itemId}-edit')">✏️ Edit</button>
-                    <button class="btn btn-reject" onclick="rejectMapping('${itemId}', '${item.originalCode}')">❌ Reject</button>
-                `;
-            }
-            
-            actions += `</div>`;
-            return actions;
-        }
-        
-        // Approval Interaction Functions
-        function approveMapping(itemId, productCode, mapping) {
-            // Update the mapping
-            productMappings.set(productCode, mapping);
-            
-            // Learn from this approval (SPEED IMPROVEMENT!)
-            learnFromCorrection('product', productCode, mapping);
-            
-            // Learn customer-specific pattern for faster future processing
-            const customerCode = getCurrentCustomerForProduct(productCode);
-            if (customerCode) {
-                businessRules.learnCustomerPattern(customerCode, productCode, mapping);
-            }
-            
-            // Update pending approvals
-            pendingApprovals.set(productCode, {
-                approved: true,
-                finalMapping: mapping,
-                timestamp: Date.now()
-            });
-            
-            // Update UI
-            const element = document.getElementById(itemId);
-            if (element) {
-                element.style.opacity = '0.7';
-                element.style.borderColor = '#28a745';
-                const actions = element.querySelector('.mapping-actions');
-                if (actions) {
-                    actions.innerHTML = `<div style="color: #28a745; font-weight: bold;">✅ Approved: ${mapping}</div>`;
-                }
-            }
-            
-            updateApprovalSummary();
-            console.log(`✅ Approved: ${productCode} → ${mapping} (Learning for faster processing)`);
-        }
-        
-        function getCurrentCustomerForProduct(productCode) {
-            // Find which customer this product belongs to
-            for (let order of processedOrders) {
-                const product = order.products.find(p => p.productCode === productCode);
-                if (product) {
-                    return order.customerCode;
-                }
-            }
-            return null;
-        }
-        
-        function rejectMapping(itemId, productCode) {
-            // Remove from mappings if it exists
-            productMappings.delete(productCode);
-            
-            // Update pending approvals
-            pendingApprovals.set(productCode, {
-                approved: false,
-                rejected: true,
-                timestamp: Date.now()
-            });
-            
-            // Update UI
-            const element = document.getElementById(itemId);
-            if (element) {
-                element.style.opacity = '0.7';
-                element.style.borderColor = '#dc3545';
-                const actions = element.querySelector('.mapping-actions');
-                if (actions) {
-                    actions.innerHTML = `<div style="color: #dc3545; font-weight: bold;">❌ Rejected - needs manual mapping</div>`;
-                }
-            }
-            
-            updateApprovalSummary();
-            console.log(`❌ Rejected mapping for: ${productCode}`);
-        }
-        
-        function showEdit(editId) {
-            document.getElementById(editId).style.display = 'block';
-        }
-        
-        function cancelEdit(editId) {
-            document.getElementById(editId).style.display = 'none';
-        }
-        
-        function saveCustomMapping(itemId, productCode) {
-            const input = document.getElementById(`${itemId}-input`);
-            const newMapping = input.value.trim().toUpperCase();
-            
-            if (!newMapping) {
-                alert('Please enter a mapping value');
-                return;
-            }
-            
-            // Approve with custom mapping
-            approveMapping(itemId, productCode, newMapping);
-            
-            // Hide edit interface
-            cancelEdit(`${itemId}-edit`);
-            
-            console.log(`📝 Custom mapping: ${productCode} → ${newMapping}`);
-        }
-        
-        function updateApprovalSummary() {
-            const totalPending = Array.from(pendingApprovals.values());
-            const approvedCount = totalPending.filter(p => p.approved).length;
-            const rejectedCount = totalPending.filter(p => p.rejected).length;
-            const totalNeeded = approvalStats.needsApproval + approvalStats.needsAttention;
-            const remainingCount = totalNeeded - approvedCount - rejectedCount;
-            
-            const summaryEl = document.getElementById('approvalSummary');
-            const proceedBtn = document.getElementById('proceedBtn');
-            
-            if (remainingCount > 0) {
-                summaryEl.textContent = `${approvedCount} approved, ${remainingCount} remaining`;
-                proceedBtn.disabled = true;
-                proceedBtn.textContent = `⏳ ${remainingCount} items need approval`;
-            } else {
-                summaryEl.textContent = `All items processed! ${approvedCount} approved, ${rejectedCount} rejected`;
-                proceedBtn.disabled = false;
-                proceedBtn.textContent = '✅ All Approved - Generate Excel';
-            }
-        }
-        
-        function proceedToExport() {
-            // Apply all approved mappings to the orders
-            processedOrders.forEach(order => {
-                order.products = order.products.map(product => {
-                    const approval = pendingApprovals.get(product.productCode);
-                    if (approval && approval.approved) {
-                        product.mappedCode = approval.finalMapping;
-                    } else {
-                        product.mappedCode = productMappings.get(product.productCode) || product.productCode;
-                    }
-                    return product;
-                });
-            });
-            
-            // Hide approval section and show export
-            document.getElementById('approvalSection').style.display = 'none';
-            document.getElementById('resultsSection').style.display = 'block';
-            
-            // Update the results section with final mappings
-            prepareResultsSection();
-            
-            // Scroll to export section
-            document.querySelector('.export-section').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function showAllDetails() {
-            // Toggle detailed view of all items
-            alert('Detailed view feature - would show expanded info for all products');
-        }
-        
-        // Speed Mode Configuration
-        function updateSpeedMode(mode) {
-            businessRules.speedMode = mode;
-            
-            const explanations = {
-                careful: '<strong>Careful Mode:</strong> Always requires human approval for similar codes like GRWS/GRBS. Safest but slowest.',
-                balanced: '<strong>Balanced Mode:</strong> After 3 consistent choices, system learns your preferences but still asks for confirmation on risky items.',
-                fast: '<strong>Fast Mode:</strong> After learning your patterns, automatically approves dangerous codes if confidence is high. Fastest but requires trust in the system.'
-            };
-            
-            document.getElementById('speedModeExplanation').innerHTML = explanations[mode];
-            
-            // Save the preference
-            try {
-                localStorage.setItem('speedMode', mode);
-            } catch (error) {
-                console.warn('Could not save speed mode preference');
-            }
-            
-            console.log(`Speed mode updated to: ${mode}`);
-        }
-        
-        // Load speed mode preference on startup
-        function loadSpeedModePreference() {
-            try {
-                const savedMode = localStorage.getItem('speedMode') || 'balanced';
-                businessRules.speedMode = savedMode;
-                
-                const radio = document.querySelector(`input[name="speedMode"][value="${savedMode}"]`);
-                if (radio) {
-                    radio.checked = true;
-                    updateSpeedMode(savedMode);
-                }
-            } catch (error) {
-                console.warn('Could not load speed mode preference');
-            }
-        }
-        
-        // Prepare results section for after approval
-        function prepareResultsSection() {
-            const ordersContainer = document.getElementById('ordersContainer');
-            ordersContainer.innerHTML = '';
-            
-            // Display each order
-            processedOrders.forEach((order, index) => {
-                const orderCard = createOrderCard(order, index);
-                ordersContainer.appendChild(orderCard);
-            });
-        }
-        
-        // Create order card HTML with approval status
-        function createOrderCard(order, index) {
-            const card = document.createElement('div');
-            card.className = 'order-card';
-            
-            const customerMapping = customerMappings.get(order.customerCode) || 'UNKNOWN';
-            
-            card.innerHTML = `
-                <div class="order-header">
-                    <h3>Order ${index + 1}: ${order.filename}</h3>
-                    <div class="order-meta">
-                        <div><strong>Type:</strong> ${order.type}</div>
-                        <div><strong>PO Number:</strong> ${order.poNumber}</div>
-                        <div><strong>Customer:</strong> ${order.customerName} (${order.customerCode})</div>
-                        <div><strong>Order Date:</strong> ${order.orderDate}</div>
-                        <div><strong>Delivery Date:</strong> ${order.deliveryDate}</div>
-                        <div><strong>Total:</strong> £${order.total.toFixed(2)}</div>
-                    </div>
-                </div>
-                <div class="order-body">
-                    <h4>Products (${order.products.length} items)</h4>
-                    <table class="products-table">
-                        <thead>
-                            <tr>
-                                <th>Qty</th>
-                                <th>Description</th>
-                                <th>Code</th>
-                                <th>Mapped To</th>
-                                <th>Case Size</th>
-                                <th>Unit Price</th>
-                                <th>Net</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${order.products.map(product => {
-                                const approval = pendingApprovals.get(product.productCode);
-                                const mappedTo = product.mappedCode || 'Pending Approval';
-                                let statusClass, statusText;
-                                
-                                if (approval && approval.approved) {
-                                    statusClass = 'status-success';
-                                    statusText = 'Approved';
-                                } else if (approval && approval.rejected) {
-                                    statusClass = 'status-error';
-                                    statusText = 'Rejected';
-                                } else {
-                                    statusClass = 'status-warning';
-                                    statusText = 'Pending';
-                                }
-                                
-                                return `
-                                    <tr>
-                                        <td>${product.quantity}</td>
-                                        <td>${product.description}</td>
-                                        <td>${product.productCode}</td>
-                                        <td><strong>${mappedTo}</strong></td>
-                                        <td>${product.caseSize}</td>
-                                        <td>£${product.unitPrice.toFixed(2)}</td>
-                                        <td>£${product.netPrice.toFixed(2)}</td>
-                                        <td><span class="status ${statusClass}">${statusText}</span></td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            return card;
-        }
-        
         // Export to Excel in Freshware format
         function exportToExcel() {
             const wb = XLSX.utils.book_new();
             const wsData = [];
             
-            // Add header row - exact format from your example
+            // Add header row
             const headers = [
                 "Name", "Email", "Financial Status", "Paid at", "Fulfillment Status", "Fulfilled at",
                 "Accepts Marketing", "Currency", "Subtotal", "Shipping", "Taxes", "Total", 
@@ -1578,36 +722,36 @@
             ];
             wsData.push(headers);
             
-            // Add data rows - matching your example format exactly
+            // Add data rows
             processedOrders.forEach(order => {
                 order.products.forEach((product, productIndex) => {
-                    const row = new Array(79).fill(""); // Fill with empty strings, not null
+                    const row = new Array(79).fill("");
                     
-                    // Generate order ID (like WF36497)
+                    // Generate order ID
                     const orderId = `WF${Math.floor(Math.random() * 90000) + 10000}`;
                     
-                    // Fill data exactly like your example
-                    row[0] = orderId; // Name - order ID like "WF36497"
-                    row[1] = ""; // Email - empty for now
+                    // Fill data exactly like Freshware format
+                    row[0] = orderId; // Name - order ID
+                    row[1] = ""; // Email
                     row[2] = "pending"; // Financial Status
-                    row[3] = ""; // Paid at - empty
+                    row[3] = ""; // Paid at
                     row[4] = "fulfilled"; // Fulfillment Status
-                    row[5] = productIndex === 0 ? `${order.deliveryDate.split('/').reverse().join('-')} 21:21:42 +0100` : ""; // Fulfilled at - timestamp format, first row only
+                    row[5] = productIndex === 0 ? `${order.deliveryDate.split('/').reverse().join('-')} 21:21:42 +0100` : ""; // Fulfilled at
                     row[6] = "yes"; // Accepts Marketing
                     row[7] = "GBP"; // Currency
-                    row[8] = productIndex === 0 ? order.total : ""; // Subtotal - first row only
-                    row[9] = productIndex === 0 ? 0 : ""; // Shipping - first row only
-                    row[10] = productIndex === 0 ? 0 : ""; // Taxes - first row only
-                    row[11] = productIndex === 0 ? order.total : ""; // Total - first row only
+                    row[8] = productIndex === 0 ? order.total : ""; // Subtotal
+                    row[9] = productIndex === 0 ? 0 : ""; // Shipping
+                    row[10] = productIndex === 0 ? 0 : ""; // Taxes
+                    row[11] = productIndex === 0 ? order.total : ""; // Total
                     row[12] = ""; // Discount Code
                     row[13] = ""; // Discount Amount
-                    row[14] = productIndex === 0 ? "FREE DELIVERY" : ""; // Shipping Method - first row only
-                    row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at - timestamp format
+                    row[14] = productIndex === 0 ? "FREE DELIVERY" : ""; // Shipping Method
+                    row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at
                     row[16] = product.quantity; // Lineitem quantity
                     row[17] = product.description; // Lineitem name
                     row[18] = product.unitPrice; // Lineitem price
                     row[19] = ""; // Lineitem compare at price
-                    row[20] = product.productCode; // Lineitem sku - original code (CAU, CEL, GRBS, etc.)
+                    row[20] = product.productCode; // Lineitem sku - original code
                     row[21] = "TRUE"; // Lineitem requires shipping
                     row[22] = "FALSE"; // Lineitem taxable
                     row[23] = "fulfilled"; // Lineitem fulfillment status
@@ -1639,24 +783,24 @@
                         row[43] = ""; // Shipping Phone
                     }
                     
-                    row[44] = productIndex === 0 ? "" : `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Notes - empty first row, delivery date others
-                    row[45] = order.deliveryDate; // Note Attributes - Column AT with delivery date (as requested)
+                    row[44] = productIndex === 0 ? "" : `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Notes
+                    row[45] = order.deliveryDate; // Note Attributes - Column AT with delivery date
                     row[46] = ""; // Cancelled at
                     row[47] = "custom"; // Payment Method
                     row[48] = ""; // Payment Reference
                     row[49] = "0"; // Refunded Amount
                     row[50] = "Osolocal2U"; // Vendor
-                    row[51] = productIndex === 0 ? order.total : ""; // Outstanding Balance - first row only
+                    row[51] = productIndex === 0 ? order.total : ""; // Outstanding Balance
                     row[52] = ""; // Employee
                     row[53] = "Unit 2 Horner House"; // Location
                     row[54] = ""; // Device ID
-                    row[55] = `1.207${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}E+13`; // Id - timestamp-like number
+                    row[55] = `1.207${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}E+13`; // Id
                     row[56] = "checkout-by-draft"; // Tags
                     row[57] = "Low"; // Risk Level
                     row[58] = "shopify_draft_order"; // Source
                     row[59] = ""; // Lineitem discount
                     
-                    // Tax columns (60-69) - all empty
+                    // Tax columns - all empty
                     for (let i = 60; i <= 69; i++) {
                         row[i] = "";
                     }
