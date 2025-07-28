@@ -382,6 +382,26 @@
         let lastCacheUpdate = 0;
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+        // Vendor mappings by product type
+        let vendorMappings = new Map();
+        
+        function initializeVendorMappings() {
+            // Frozen products = CoolFoodGroupMaster
+            vendorMappings.set('YRASB', 'CoolFoodGroupMaster'); // Frozen Raspberries
+            vendorMappings.set('YBLUB', 'CoolFoodGroupMaster'); // Frozen Blueberries  
+            vendorMappings.set('YSFB', 'CoolFoodGroupMaster');  // Frozen Summer Fruits
+            vendorMappings.set('YCHERB', 'CoolFoodGroupMaster'); // Frozen Cherries
+            
+            // Add more frozen product codes as needed
+            // Any product starting with 'Y' might be frozen, but we'll map specific ones
+            
+            // Fresh products = Osolocal2U (default for everything else)
+        }
+
+        function getVendorForProduct(productCode) {
+            return vendorMappings.get(productCode) || 'Osolocal2U';
+        }
+
         // Firebase Functions
         async function loadCustomerEmailsFromFirestore() {
             try {
@@ -558,6 +578,9 @@
             productMappings.set('GRBS', 'GRAPES_BLACK'); 
             productMappings.set('GRWS', 'GRAPES_WHITE');
             productMappings.set('POSW', 'POTATO_SWEET');
+
+            // Initialize vendor mappings
+            initializeVendorMappings();
 
             // Load email mappings from Firestore
             await loadCustomerEmailsFromFirestore();
@@ -962,100 +985,79 @@
             
             // Add data rows with email lookup
             for (const order of processedOrders) {
+                // Generate ONE order ID per PDF order
+                const orderId = `WF${Math.floor(Math.random() * 90000) + 10000}`;
+                
+                // Get customer email from Firebase
+                const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
+                
                 for (let productIndex = 0; productIndex < order.products.length; productIndex++) {
                     const product = order.products[productIndex];
                     const row = new Array(79).fill("");
                     
-                    // Generate order ID
-                    const orderId = `WF${Math.floor(Math.random() * 90000) + 10000}`;
-                    
-                    // Get customer email from Firebase
-                    const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
-                    
-                    // Fill data exactly like Freshware format
+                    // SAME order ID for all line items
                     row[0] = orderId; // Name - order ID
                     row[1] = customerEmail; // Email - FROM FIREBASE!
-                    row[2] = "pending"; // Financial Status
-                    row[3] = ""; // Paid at
-                    row[4] = "fulfilled"; // Fulfillment Status
-                    row[5] = productIndex === 0 ? `${order.deliveryDate.split('/').reverse().join('-')} 21:21:42 +0100` : ""; // Fulfilled at
-                    row[6] = "yes"; // Accepts Marketing
-                    row[7] = "GBP"; // Currency
-                    row[8] = productIndex === 0 ? order.total : ""; // Subtotal
-                    row[9] = productIndex === 0 ? 0 : ""; // Shipping
-                    row[10] = productIndex === 0 ? 0 : ""; // Taxes
-                    row[11] = productIndex === 0 ? order.total : ""; // Total
-                    row[12] = ""; // Discount Code
-                    row[13] = ""; // Discount Amount
-                    row[14] = productIndex === 0 ? "FREE DELIVERY" : ""; // Shipping Method
-                    row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at
-                    row[16] = product.quantity; // Lineitem quantity
-                    row[17] = product.description; // Lineitem name
-                    row[18] = product.unitPrice; // Lineitem price
-                    row[19] = ""; // Lineitem compare at price
-                    row[20] = product.productCode; // Lineitem sku
-                    row[21] = "TRUE"; // Lineitem requires shipping
-                    row[22] = "FALSE"; // Lineitem taxable
-                    row[23] = "fulfilled"; // Lineitem fulfillment status
                     
-                    // Billing/Shipping info - first row only
+                    // Order-level data ONLY on first line item
                     if (productIndex === 0) {
+                        row[2] = "pending"; // Financial Status
+                        row[4] = "fulfilled"; // Fulfillment Status
+                        row[5] = `${order.deliveryDate.split('/').reverse().join('-')} 21:21:42 +0100`; // Fulfilled at
+                        row[6] = "yes"; // Accepts Marketing
+                        row[7] = "GBP"; // Currency
+                        row[8] = order.total; // Subtotal
+                        row[9] = 0; // Shipping
+                        row[10] = 0; // Taxes
+                        row[11] = order.total; // Total
+                        row[14] = "FREE DELIVERY"; // Shipping Method
+                        row[47] = "custom"; // Payment Method
+                        row[49] = "0"; // Refunded Amount
+                        row[51] = order.total; // Outstanding Balance
+                        
+                        // Billing/Shipping info - first row only
                         const customerName = customerMappings.get(order.customerCode) || order.customerName;
                         row[24] = `${customerName} (${order.customerCode})`; // Billing Name
                         row[25] = "Address Line 1"; // Billing Street
                         row[26] = "Address Line 1"; // Billing Address1
-                        row[27] = ""; // Billing Address2
-                        row[28] = ""; // Billing Company
                         row[29] = "London"; // Billing City
                         row[30] = "SW1A 0AA"; // Billing Zip
                         row[31] = "ENG"; // Billing Province
                         row[32] = "GB"; // Billing Country
-                        row[33] = ""; // Billing Phone
                         
                         // Shipping same as billing
                         row[34] = row[24]; // Shipping Name
                         row[35] = row[25]; // Shipping Street
                         row[36] = row[26]; // Shipping Address1
-                        row[37] = ""; // Shipping Address2
-                        row[38] = ""; // Shipping Company
                         row[39] = row[29]; // Shipping City
                         row[40] = row[30]; // Shipping Zip
                         row[41] = "ENG"; // Shipping Province
                         row[42] = "GB"; // Shipping Country
-                        row[43] = ""; // Shipping Phone
+                    } else {
+                        // Leave order-level fields BLANK for additional line items
+                        row[44] = `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Notes
                     }
                     
-                    row[44] = productIndex === 0 ? "" : `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Notes
+                    // Line item data - appears on ALL rows
+                    row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at
+                    row[16] = product.quantity; // Lineitem quantity
+                    row[17] = product.description; // Lineitem name
+                    row[18] = product.unitPrice; // Lineitem price
+                    row[20] = product.productCode; // Lineitem sku
+                    row[21] = "TRUE"; // Lineitem requires shipping
+                    row[22] = "FALSE"; // Lineitem taxable
+                    row[23] = "fulfilled"; // Lineitem fulfillment status
                     row[45] = order.deliveryDate; // Note Attributes
-                    row[46] = ""; // Cancelled at
-                    row[47] = "custom"; // Payment Method
-                    row[48] = ""; // Payment Reference
-                    row[49] = "0"; // Refunded Amount
                     row[50] = "Osolocal2U"; // Vendor
-                    row[51] = productIndex === 0 ? order.total : ""; // Outstanding Balance
-                    row[52] = ""; // Employee
                     row[53] = "Unit 2 Horner House"; // Location
-                    row[54] = ""; // Device ID
                     row[55] = `1.207${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}E+13`; // Id
                     row[56] = "checkout-by-draft"; // Tags
                     row[57] = "Low"; // Risk Level
                     row[58] = "shopify_draft_order"; // Source
-                    row[59] = ""; // Lineitem discount
                     
-                    // Tax columns - all empty
-                    for (let i = 60; i <= 69; i++) {
-                        row[i] = "";
-                    }
-                    
-                    row[70] = ""; // Phone
-                    row[71] = ""; // Receipt Number
-                    row[72] = ""; // Duties
+                    // Tax columns and remaining fields - all empty except province names
                     row[73] = "England"; // Billing Province Name
                     row[74] = "England"; // Shipping Province Name
-                    row[75] = ""; // Payment ID
-                    row[76] = ""; // Payment Terms Name
-                    row[77] = ""; // Next Payment Due At
-                    row[78] = ""; // Payment References
                     
                     wsData.push(row);
                 }
