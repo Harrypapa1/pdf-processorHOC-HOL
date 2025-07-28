@@ -985,12 +985,26 @@
         
         // Display processing results directly (no approval needed)
         function displayResults() {
+            console.log('displayResults called with orders:', processedOrders);
+            
             const resultsSection = document.getElementById('resultsSection');
             const ordersContainer = document.getElementById('ordersContainer');
+            
+            if (!resultsSection) {
+                console.error('Results section not found!');
+                return;
+            }
+            
+            if (!ordersContainer) {
+                console.error('Orders container not found!');
+                return;
+            }
             
             // Update stats
             const totalProducts = processedOrders.reduce((sum, order) => sum + order.products.length, 0);
             const totalValue = processedOrders.reduce((sum, order) => sum + order.total, 0);
+            
+            console.log('Stats calculated:', {totalProducts, totalValue});
             
             document.getElementById('totalOrders').textContent = processedOrders.length;
             document.getElementById('totalProducts').textContent = totalProducts;
@@ -1002,11 +1016,21 @@
             
             // Display each order
             processedOrders.forEach((order, index) => {
-                const orderCard = createOrderCard(order, index);
-                ordersContainer.appendChild(orderCard);
+                console.log(`Creating card for order ${index}:`, order);
+                try {
+                    const orderCard = createOrderCard(order, index);
+                    ordersContainer.appendChild(orderCard);
+                    console.log(`Successfully added order card ${index}`);
+                } catch (error) {
+                    console.error(`Error creating order card ${index}:`, error);
+                }
             });
             
+            console.log('Showing results section');
             resultsSection.style.display = 'block';
+            
+            // Force scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
         
         // Create order card HTML (simplified - no approval status)
