@@ -9,6 +9,9 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
     </script>
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -108,6 +111,43 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .admin-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 2px solid #e3e8ef;
+        }
+        
+        .admin-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .admin-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .admin-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
         }
         
         .processing-section {
@@ -253,6 +293,29 @@
                     Choose Files
                 </button>
             </div>
+
+            <!-- Customer Email Management Section -->
+            <div class="admin-section">
+                <h3>🔧 Customer Email Management</h3>
+                
+                <div class="admin-grid">
+                    <input type="text" id="customerCode" placeholder="Customer Code (e.g., 07BELLA)" class="admin-input">
+                    <input type="text" id="customerName" placeholder="Customer Name" class="admin-input">
+                    <input type="email" id="customerEmail" placeholder="customer@email.com" class="admin-input">
+                    <button class="btn" onclick="addSingleCustomerEmail()">Add Email</button>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <h4>Batch Upload CSV</h4>
+                    <textarea id="csvEmails" rows="5" placeholder="CustomerCode,CustomerName,Email&#10;07BELLA,BELLA_KITCHEN,bella@example.com&#10;13RREST,RIVER_KITCHEN,river@example.com" class="admin-textarea"></textarea>
+                    <button class="btn" onclick="batchUploadEmails()" style="margin-top: 10px;">Upload Batch</button>
+                </div>
+                
+                <div>
+                    <button class="btn" onclick="showCurrentMappings()">Show All Mappings</button>
+                    <span id="mappingCount" style="margin-left: 15px; color: #666;"></span>
+                </div>
+            </div>
             
             <!-- Processing Section -->
             <div class="processing-section" id="processingSection">
@@ -298,13 +361,185 @@
     </div>
 
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeNUflDD7eEiZS9ZE5Z1WwiAMP8Nx4krY",
+            authDomain: "email-order-system.firebaseapp.com",
+            projectId: "email-order-system",
+            storageBucket: "email-order-system.firebasestorage.app",
+            messagingSenderId: "148310260005",
+            appId: "1:148310260005:web:65014f7b35ebd7e46ec2cc"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         // Global variables
         let processedOrders = [];
         let customerMappings = new Map();
         let productMappings = new Map();
+        let emailMappingsCache = new Map();
+        let lastCacheUpdate = 0;
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+        // Firebase Functions
+        async function loadCustomerEmailsFromFirestore() {
+            try {
+                console.log('Loading customer emails from Firestore...');
+                
+                const snapshot = await db.collection('customerEmails').get();
+                
+                emailMappingsCache.clear();
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    emailMappingsCache.set(data.customerCode, data.email);
+                    if (data.customerName) {
+                        emailMappingsCache.set(data.customerName, data.email);
+                    }
+                });
+                
+                lastCacheUpdate = Date.now();
+                console.log(`Loaded ${emailMappingsCache.size} customer email mappings`);
+                updateMappingCount();
+                
+                return emailMappingsCache;
+            } catch (error) {
+                console.error('Error loading customer emails:', error);
+                return emailMappingsCache;
+            }
+        }
+
+        async function getCustomerEmail(customerCode, customerName) {
+            if (Date.now() - lastCacheUpdate > CACHE_DURATION) {
+                await loadCustomerEmailsFromFirestore();
+            }
+            
+            return emailMappingsCache.get(customerCode) || 
+                   emailMappingsCache.get(customerName) || 
+                   '';
+        }
+
+        async function addCustomerEmail(customerCode, customerName, email) {
+            try {
+                const docData = {
+                    customerCode: customerCode,
+                    customerName: customerName,
+                    email: email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('customerEmails').doc(customerCode).set(docData);
+                
+                emailMappingsCache.set(customerCode, email);
+                if (customerName) {
+                    emailMappingsCache.set(customerName, email);
+                }
+                
+                console.log(`Added email mapping: ${customerCode} -> ${email}`);
+                updateMappingCount();
+                return true;
+            } catch (error) {
+                console.error('Error adding customer email:', error);
+                return false;
+            }
+        }
+
+        async function batchUploadCustomerEmails(csvText) {
+            try {
+                const lines = csvText.trim().split('\n');
+                const batch = db.batch();
+                let count = 0;
+                
+                for (const line of lines) {
+                    const [customerCode, customerName, email] = line.split(',').map(s => s.trim());
+                    
+                    if (customerCode && email) {
+                        const docRef = db.collection('customerEmails').doc(customerCode);
+                        batch.set(docRef, {
+                            customerCode,
+                            customerName: customerName || customerCode,
+                            email,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        count++;
+                    }
+                }
+                
+                await batch.commit();
+                console.log(`Batch uploaded ${count} customer email mappings`);
+                
+                await loadCustomerEmailsFromFirestore();
+                return count;
+            } catch (error) {
+                console.error('Error batch uploading:', error);
+                throw error;
+            }
+        }
+
+        // UI Functions for Email Management
+        async function addSingleCustomerEmail() {
+            const code = document.getElementById('customerCode').value.trim();
+            const name = document.getElementById('customerName').value.trim();
+            const email = document.getElementById('customerEmail').value.trim();
+            
+            if (!code || !email) {
+                alert('Customer Code and Email are required');
+                return;
+            }
+            
+            const success = await addCustomerEmail(code, name, email);
+            if (success) {
+                alert('Customer email added successfully!');
+                document.getElementById('customerCode').value = '';
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+            } else {
+                alert('Error adding customer email');
+            }
+        }
+
+        async function batchUploadEmails() {
+            const csvText = document.getElementById('csvEmails').value.trim();
+            
+            if (!csvText) {
+                alert('Please enter CSV data');
+                return;
+            }
+            
+            try {
+                const count = await batchUploadCustomerEmails(csvText);
+                alert(`Successfully uploaded ${count} customer email mappings!`);
+                document.getElementById('csvEmails').value = '';
+            } catch (error) {
+                alert('Error uploading emails: ' + error.message);
+            }
+        }
+
+        function updateMappingCount() {
+            const countElement = document.getElementById('mappingCount');
+            if (countElement) {
+                countElement.textContent = `${emailMappingsCache.size} email mappings loaded`;
+            }
+        }
+
+        async function showCurrentMappings() {
+            await loadCustomerEmailsFromFirestore();
+            let mappingsList = '';
+            emailMappingsCache.forEach((email, customer) => {
+                mappingsList += `${customer}: ${email}\n`;
+            });
+            
+            if (mappingsList) {
+                alert('Current Email Mappings:\n\n' + mappingsList);
+            } else {
+                alert('No email mappings found. Add some using the form above.');
+            }
+        }
         
         // Initialize known mappings
-        function initializeMappings() {
+        async function initializeMappings() {
             // Customer mappings
             customerMappings.set('07BELLA', 'BELLA_KITCHEN');
             customerMappings.set('13RREST', 'RIVER_KITCHEN');
@@ -323,11 +558,14 @@
             productMappings.set('GRBS', 'GRAPES_BLACK'); 
             productMappings.set('GRWS', 'GRAPES_WHITE');
             productMappings.set('POSW', 'POTATO_SWEET');
+
+            // Load email mappings from Firestore
+            await loadCustomerEmailsFromFirestore();
         }
         
         // Initialize the application
-        function init() {
-            initializeMappings();
+        async function init() {
+            await initializeMappings();
             setupEventListeners();
             console.log('App initialized successfully');
         }
@@ -697,8 +935,8 @@
             return card;
         }
         
-        // Export to Excel in Freshware format
-        function exportToExcel() {
+        // Export to Excel in Freshware format with email lookup
+        async function exportToExcel() {
             const wb = XLSX.utils.book_new();
             const wsData = [];
             
@@ -722,17 +960,21 @@
             ];
             wsData.push(headers);
             
-            // Add data rows
-            processedOrders.forEach(order => {
-                order.products.forEach((product, productIndex) => {
+            // Add data rows with email lookup
+            for (const order of processedOrders) {
+                for (let productIndex = 0; productIndex < order.products.length; productIndex++) {
+                    const product = order.products[productIndex];
                     const row = new Array(79).fill("");
                     
                     // Generate order ID
                     const orderId = `WF${Math.floor(Math.random() * 90000) + 10000}`;
                     
+                    // Get customer email from Firebase
+                    const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
+                    
                     // Fill data exactly like Freshware format
                     row[0] = orderId; // Name - order ID
-                    row[1] = ""; // Email
+                    row[1] = customerEmail; // Email - FROM FIREBASE!
                     row[2] = "pending"; // Financial Status
                     row[3] = ""; // Paid at
                     row[4] = "fulfilled"; // Fulfillment Status
@@ -751,7 +993,7 @@
                     row[17] = product.description; // Lineitem name
                     row[18] = product.unitPrice; // Lineitem price
                     row[19] = ""; // Lineitem compare at price
-                    row[20] = product.productCode; // Lineitem sku - original code
+                    row[20] = product.productCode; // Lineitem sku
                     row[21] = "TRUE"; // Lineitem requires shipping
                     row[22] = "FALSE"; // Lineitem taxable
                     row[23] = "fulfilled"; // Lineitem fulfillment status
@@ -784,7 +1026,7 @@
                     }
                     
                     row[44] = productIndex === 0 ? "" : `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Notes
-                    row[45] = order.deliveryDate; // Note Attributes - Column AT with delivery date
+                    row[45] = order.deliveryDate; // Note Attributes
                     row[46] = ""; // Cancelled at
                     row[47] = "custom"; // Payment Method
                     row[48] = ""; // Payment Reference
@@ -816,8 +1058,8 @@
                     row[78] = ""; // Payment References
                     
                     wsData.push(row);
-                });
-            });
+                }
+            }
             
             const ws = XLSX.utils.aoa_to_sheet(wsData);
             XLSX.utils.book_append_sheet(wb, ws, "Orders");
