@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Order Processing System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            padding: 40px;
+        }
+        
+        .upload-section {
+            border: 3px dashed #e3e8ef;
+            border-radius: 15px;
+            padding: 60px 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text h3 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .upload-text p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .processing-section {
+            display: none;
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            background: #e3e8ef;
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .results-section {
+            display: none;
+            margin: 30px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        /* Human-in-the-Loop Approval Styles */
+        .approval-section {
+            display: none;
+            margin: 30px 0;
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+        }
+        
+        .approval-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .approval-header h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .approval-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .approval-stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .approval-stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .approval-category {
+            margin: 25px 0;
+        }
+        
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .category-header h3 {
+            margin-left: 10px;
+            color: #2c3e50;
+        }
+        
+        .mapping-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .mapping-item.auto-approved {
+            border-color: #28a745;
+            background: #f8fff9;
+            opacity: 0.9;
+        }
+        
+        .mapping-item.needs-approval {
+            border-color: #ffc107;
+            background: #fffdf0;
+        }
+        
+        .mapping-item.dangerous {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .mapping-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .mapping-flow {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .original-code {
+            background: #e9ecef;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .arrow {
+            font-size: 1.5rem;
+            color: #6c757d;
+        }
+        
+        .suggested-mapping {
+            background: #d4edda;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #155724;
+        }
+        
+        .confidence-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .confidence-high { background: #d4edda; color: #155724; }
+        .confidence-medium { background: #fff3cd; color: #856404; }
+        .confidence-low { background: #f8d7da; color: #721c24; }
+        
+        .reasoning {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin: 10px 0;
+        }
+        
+        .mapping-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-approve {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-edit {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-reject {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-alt {
+            background: #6f42c1;
+            color: white;
+        }
+        
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #856404;
+        }
+        
+        .warning-box strong {
+            color: #d63031;
+        }
+        
+        .edit-mapping {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .edit-mapping input {
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 4px;
+            margin: 0 10px;
+            min-width: 200px;
+        }
+        
+        .bulk-actions {
+            background: #e9ecef;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .bulk-actions h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .btn-bulk {
+            font-size: 1.1rem;
+            padding: 15px 30px;
+            margin: 10px;
+        }
+        
+        .order-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            overflow: hidden;
+            border-left: 5px solid #667eea;
+        }
+        
+        .order-header {
+            background: #f8fafc;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e3e8ef;
+        }
+        
+        .order-header h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .order-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .order-body {
+            padding: 30px;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .products-table th,
+        .products-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e3e8ef;
+        }
+        
+        .products-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-success { background: #d4edda; color: #155724; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        
+        .export-section {
+            background: #e8f5e8;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Email Order Processing</h1>
+            <p>Transform PDF orders into Excel files for Freshware - Now with Smart Learning!</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- File Upload Section -->
+            <div class="upload-section" id="uploadArea">
+                <div class="upload-icon">📎</div>
+                <div class="upload-text">
+                    <h3>Drop PDF files here or click to browse</h3>
+                    <p>Support for consolidated and standard purchase orders</p>
+                </div>
+                <input type="file" id="fileInput" class="file-input" multiple accept=".pdf">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    Choose Files
+                </button>
+            </div>
+            
+            <!-- Processing Section -->
+            <div class="processing-section" id="processingSection">
+                <h3>🔄 Processing Orders...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="processingStatus">Initializing...</p>
+            </div>
+            
+            <!-- Human-in-the-Loop Approval Section - REMOVED FOR NOW -->
+            
+            <div class="results-section" id="resultsSection">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalOrders">0</div>
+                        <div class="stat-label">Orders Processed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalProducts">0</div>
+                        <div class="stat-label">Products Found</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="mappedProducts">0</div>
+                        <div class="stat-label">Mapped Products</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalValue">£0</div>
+                        <div class="stat-label">Total Value</div>
+                    </div>
+                </div>
+                
+                <div id="ordersContainer"></div>
+                
+                <!-- Export Section -->
+                <div class="export-section">
+                    <h3>📊 Ready to Export</h3>
+                    <p>All orders have been processed and are ready for Freshware import</p>
+                    <button class="btn btn-success" id="exportBtn" onclick="exportToExcel()">
+                        Download Excel File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let processedOrders = [];
+        let customerMappings = new Map();
+        let productMappings = new Map();
+        
+        // Initialize known mappings
+        function initializeMappings() {
+            // Customer mappings (you can extend these)
+            customerMappings.set('07BELLA', 'BELLA_KITCHEN');
+            customerMappings.set('13RREST', 'RIVER_KITCHEN');
+            customerMappings.set('92TABLE', 'TABLE_KITCHEN');
+            customerMappings.set('76RICH', 'RICHMOND_HOUSE');
+            
+            // Product mappings (you can extend these) - these are just for display, SKU codes use original
+            productMappings.set('AVO', 'AVOCADO_PEAR');
+            productMappings.set('KI', 'KIWI_FRUIT');
+            productMappings.set('PINL', 'PINEAPPLE_LARGE');
+            productMappings.set('CAU', 'CAULIFLOWER');
+            productMappings.set('PLUR', 'PLUMS');
+            productMappings.set('SAT', 'SATSUMAS');
+            productMappings.set('STR', 'STRAWBERRIES');
+            productMappings.set('CEL', 'CELERY');
+            productMappings.set('GRBS', 'GRAPES_BLACK'); 
+            productMappings.set('GRWS', 'GRAPES_WHITE');
+            productMappings.set('POSW', 'POTATO_SWEET');
+        }
+        
+        // Initialize the application
+        function init() {
+            initializeMappings();
+            setupEventListeners();
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // File input change
+            fileInput.addEventListener('change', handleFiles);
+            
+            // Drag and drop - with debugging
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('dragover');
+                console.log('Drag over detected');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+                console.log('Drag leave detected');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+                
+                console.log('Drop detected', e.dataTransfer.files);
+                
+                const files = Array.from(e.dataTransfer.files);
+                console.log('All files:', files.map(f => f.name + ' (' + f.type + ')'));
+                
+                // Filter for PDFs - be more lenient with file type detection
+                const pdfFiles = files.filter(f => 
+                    f.type === 'application/pdf' || 
+                    f.name.toLowerCase().endsWith('.pdf')
+                );
+                
+                console.log('PDF files found:', pdfFiles.length);
+                
+                if (pdfFiles.length > 0) {
+                    processFiles(pdfFiles);
+                } else {
+                    alert('Please drop PDF files only. Found: ' + files.map(f => f.name).join(', '));
+                }
+            });
+            
+            // Also add click handler for the upload area
+            uploadArea.addEventListener('click', (e) => {
+                // Don't trigger if clicking the button
+                if (!e.target.closest('button')) {
+                    fileInput.click();
+                }
+            });
+            
+            console.log('Event listeners set up successfully');
+        }
+        
+        // Handle file selection
+        function handleFiles(event) {
+            console.log('Handle files called', event);
+            const files = Array.from(event.target.files);
+            console.log('Files selected:', files.map(f => f.name));
+            
+            if (files.length > 0) {
+                processFiles(files);
+            } else {
+                console.log('No files selected');
+            }
+        }
+        
+        // Process PDF files
+        async function processFiles(files) {
+            console.log('Processing files:', files.map(f => f.name));
+            
+            document.getElementById('processingSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            
+            processedOrders = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                updateProgress((i / files.length) * 100, `Processing ${file.name}...`);
+                
+                try {
+                    console.log(`Processing file ${i + 1}/${files.length}: ${file.name}`);
+                    const order = await processPDF(file);
+                    if (order) {
+                        processedOrders.push(order);
+                        console.log('Successfully processed:', file.name);
+                    } else {
+                        console.log('No order data extracted from:', file.name);
+                    }
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    alert(`Error processing ${file.name}: ${error.message}`);
+                }
+            }
+            
+            updateProgress(100, 'Processing complete!');
+            setTimeout(() => {
+                document.getElementById('processingSection').style.display = 'none';
+                displayResults();
+            }, 1000);
+        }
+        
+        // Real PDF processing with PDF.js
+        async function processPDF(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                const page = await pdf.getPage(1);
+                const textContent = await page.getTextContent();
+                
+                // Extract text from PDF
+                const text = textContent.items.map(item => item.str).join(' ');
+                console.log('Extracted PDF text:', text); // Debug log
+                
+                // Determine template type and parse
+                const isConsolidated = text.includes('Consolidated Purchase Order');
+                
+                if (isConsolidated) {
+                    return parseConsolidatedOrder(text, file.name);
+                } else {
+                    return parseStandardOrder(text, file.name);
+                }
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                throw error;
+            }
+        }
+        
+        // Parse consolidated order template (like your House of Commons PDF)
+        function parseConsolidatedOrder(text, filename) {
+            const order = {
+                filename: filename,
+                type: 'Consolidated',
+                customerCode: '',
+                customerName: '',
+                poNumber: '',
+                orderDate: '',
+                deliveryDate: '',
+                products: [],
+                total: 0
+            };
+            
+            // Extract PO Number - more flexible patterns
+            const poPatterns = [
+                /PO Number:\s*([A-Z0-9]+)/i,
+                /Purchase Order[^:]*:\s*([A-Z0-9]+)/i,
+                /PO[:\s]+([A-Z0-9]+)/i
+            ];
+            
+            for (const pattern of poPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.poNumber = match[1];
+                    break;
+                }
+            }
+            
+            // Extract dates - multiple formats
+            const orderDatePatterns = [
+                /Order Date:\s*(\d{2}\/\d{2}\/\d{4})/,
+                /Date:\s*(\d{2}\/\d{2}\/\d{4})/
+            ];
+            
+            for (const pattern of orderDatePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.orderDate = match[1];
+                    break;
+                }
+            }
+            
+            const deliveryDatePatterns = [
+                /Delivery Date:\s*(\d{2}\/\d{2}\/\d{4})/,
+                /Deliver[^:]*:\s*(\d{2}\/\d{2}\/\d{4})/
+            ];
+            
+            for (const pattern of deliveryDatePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.deliveryDate = match[1];
+                    break;
+                }
+            }
+            
+            // Extract customer info - flexible patterns for your format
+            const customerPatterns = [
+                /following outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
+                /outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
+                /The\s+([^(]+)\s*\(([^)]+)\)/i
+            ];
+            
+            for (const pattern of customerPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.customerName = match[1].trim();
+                    order.customerCode = match[2].trim();
+                    break;
+                }
+            }
+            
+            // Extract products - Enhanced pattern for your format
+            // Looking for: Qty Description Code CaseSize UnitPrice Net
+            const productPatterns = [
+                // Pattern for: 2.00 CAULIFLOWER CAU 1xEach 1.75 3.50
+                /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x[A-Za-z]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g,
+                // Backup pattern
+                /(\d+\.?\d*)\s+([A-Z][A-Z\s]+?)\s+([A-Z]{2,5})\s+([^\d]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g
+            ];
+            
+            for (const pattern of productPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    const product = {
+                        quantity: parseFloat(match[1]),
+                        description: match[2].trim(),
+                        productCode: match[3].trim(),
+                        caseSize: match[4].trim(),
+                        unitPrice: parseFloat(match[5]),
+                        netPrice: parseFloat(match[6])
+                    };
+                    
+                    // Validate the extracted data
+                    if (product.quantity > 0 && product.productCode && product.unitPrice > 0) {
+                        order.products.push(product);
+                        order.total += product.netPrice;
+                    }
+                }
+                
+                // If we found products, break
+                if (order.products.length > 0) break;
+            }
+            
+            // Extract total if products parsing failed
+            if (order.total === 0) {
+                const totalPatterns = [
+                    /Net Total[:\s]+(\d+\.?\d*)/i,
+                    /Total[:\s]+(\d+\.?\d*)/i
+                ];
+                
+                for (const pattern of totalPatterns) {
+                    const match = text.match(pattern);
+                    if (match) {
+                        order.total = parseFloat(match[1]);
+                        break;
+                    }
+                }
+            }
+            
+            console.log('Parsed consolidated order:', order); // Debug log
+            return order;
+        }
+        
+        // Parse standard order template  
+        function parseStandardOrder(text, filename) {
+            const order = {
+                filename: filename,
+                type: 'Standard',
+                customerCode: '',
+                customerName: '',
+                poNumber: '',
+                orderDate: '',
+                deliveryDate: '',
+                products: [],
+                total: 0
+            };
+            
+            // Extract PO Number
+            const poMatch = text.match(/PO Number:\s*([A-Z0-9]+)/);
+            if (poMatch) order.poNumber = poMatch[1];
+            
+            // Extract dates
+            const orderDateMatch = text.match(/Order Date:\s*(\d{2}\/\d{2}\/\d{4})/);
+            if (orderDateMatch) order.orderDate = orderDateMatch[1];
+            
+            const deliveryDateMatch = text.match(/Delivery Date:\s*(\d{2}\/\d{2}\/\d{4})/);
+            if (deliveryDateMatch) order.deliveryDate = deliveryDateMatch[1];
+            
+            // Extract customer code from Account No
+            const accountMatch = text.match(/Account No:\s*([A-Z0-9]+)/);
+            if (accountMatch) order.customerCode = accountMatch[1];
+            
+            // Extract customer name from Deliver To section
+            const deliverMatch = text.match(/Deliver To\s+([^\n]+)/);
+            if (deliverMatch) order.customerName = deliverMatch[1].trim();
+            
+            // Extract products table (same pattern as consolidated)
+            const tablePattern = /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x\w+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g;
+            let match;
+            
+            while ((match = tablePattern.exec(text)) !== null) {
+                const product = {
+                    quantity: parseFloat(match[1]),
+                    description: match[2].trim(),
+                    productCode: match[3].trim(),
+                    caseSize: match[4].trim(),
+                    unitPrice: parseFloat(match[5]),
+                    netPrice: parseFloat(match[6])
+                };
+                order.products.push(product);
+                order.total += product.netPrice;
+            }
+            
+            console.log('Parsed standard order:', order); // Debug log
+            return order;
+        }
+        
+        // Update progress bar
+        function updateProgress(percent, status) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('processingStatus').textContent = status;
+        }
+        
+        // Human-in-the-Loop Processing Functions
+        function processProductForApproval(product, order) {
+            const productCode = product.productCode;
+            const existingMapping = productMappings.get(productCode);
+            
+            // Get base confidence from existing mappings
+            let baseConfidence = existingMapping ? 0.9 : 0.3;
+            
+            // Apply learned corrections
+            const correctionKey = `product:${productCode}`;
+            const learnedConfidence = confidenceScores.get(correctionKey) || 0;
+            baseConfidence += (learnedConfidence * 0.1); // Each learned correction adds 10%
+            
+            // Get business rule validation
+            const validation = businessRules.validateMapping(
+                productCode, 
+                existingMapping,
+                {
+                    unitPrice: product.unitPrice,
+                    customer: order.customerCode,
+                    description: product.description
+                }
+            );
+            
+            const finalConfidence = Math.min(baseConfidence * validation.confidence, 1.0);
+            
+            const approvalItem = {
+                orderId: order.poNumber,
+                product: product,
+                originalCode: productCode,
+                suggestedMapping: existingMapping || `UNKNOWN_${productCode}`,
+                confidence: finalConfidence,
+                category: validation.category,
+                requiresHuman: validation.requiresHumanValidation,
+                reasoning: generateReasoning(product, existingMapping, validation, finalConfidence),
+                warnings: validation.warnings,
+                approved: false,
+                finalMapping: null
+            };
+            
+            return approvalItem;
+        }
+        
+        function generateReasoning(product, mapping, validation, confidence) {
+            const reasons = [];
+            
+            if (mapping) {
+                reasons.push("✓ Found in database");
+            } else {
+                reasons.push("⚠ New product code");
+            }
+            
+            if (confidence > 0.9) {
+                reasons.push("✓ High confidence match");
+            } else if (confidence > 0.7) {
+                reasons.push("⚠ Medium confidence");
+            } else {
+                reasons.push("⚠ Low confidence");
+            }
+            
+            if (validation.warnings.length === 0) {
+                reasons.push("✓ No warnings");
+            }
+            
+            reasons.push(...validation.warnings);
+            
+            return reasons.join(" • ");
+        }
+        
+        function categorizeApprovals(approvalItems) {
+            const categories = {
+                autoApprove: [],
+                needsApproval: [],
+                needsAttention: []
+            };
+            
+            let totalConfidence = 0;
+            
+            approvalItems.forEach(item => {
+                totalConfidence += item.confidence;
+                
+                switch(item.category) {
+                    case 'auto_approve':
+                        categories.autoApprove.push(item);
+                        item.approved = true; // Auto-approve high confidence items
+                        item.finalMapping = item.suggestedMapping;
+                        break;
+                    case 'needs_approval':
+                        categories.needsApproval.push(item);
+                        break;
+                    case 'needs_attention':
+                        categories.needsAttention.push(item);
+                        break;
+                }
+            });
+            
+            // Update stats
+            approvalStats = {
+                autoApproved: categories.autoApprove.length,
+                needsApproval: categories.needsApproval.length,
+                needsAttention: categories.needsAttention.length,
+                avgConfidence: approvalItems.length > 0 ? Math.round((totalConfidence / approvalItems.length) * 100) : 0
+            };
+            
+            return categories;
+        }
+        
+        // Display processing results directly (no approval needed)
+        function displayResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const ordersContainer = document.getElementById('ordersContainer');
+            
+            // Update stats
+            const totalProducts = processedOrders.reduce((sum, order) => sum + order.products.length, 0);
+            const totalValue = processedOrders.reduce((sum, order) => sum + order.total, 0);
+            
+            document.getElementById('totalOrders').textContent = processedOrders.length;
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('mappedProducts').textContent = totalProducts;
+            document.getElementById('totalValue').textContent = '£' + totalValue.toFixed(2);
+            
+            // Clear previous results
+            ordersContainer.innerHTML = '';
+            
+            // Display each order
+            processedOrders.forEach((order, index) => {
+                const orderCard = createOrderCard(order, index);
+                ordersContainer.appendChild(orderCard);
+            });
+            
+            resultsSection.style.display = 'block';
+        }
+        
+        // Create order card HTML (simplified - no approval status)
+        function createOrderCard(order, index) {
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            
+            const customerMapping = customerMappings.get(order.customerCode) || order.customerCode;
+            
+            card.innerHTML = `
+                <div class="order-header">
+                    <h3>Order ${index + 1}: ${order.filename}</h3>
+                    <div class="order-meta">
+                        <div><strong>Type:</strong> ${order.type}</div>
+                        <div><strong>PO Number:</strong> ${order.poNumber}</div>
+                        <div><strong>Customer:</strong> ${order.customerName} (${order.customerCode})</div>
+                        <div><strong>Order Date:</strong> ${order.orderDate}</div>
+                        <div><strong>Delivery Date:</strong> ${order.deliveryDate}</div>
+                        <div><strong>Total:</strong> £${order.total.toFixed(2)}</div>
+                    </div>
+                </div>
+                <div class="order-body">
+                    <h4>Products (${order.products.length} items)</h4>
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>Qty</th>
+                                <th>Description</th>
+                                <th>SKU Code</th>
+                                <th>Case Size</th>
+                                <th>Unit Price</th>
+                                <th>Net</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${order.products.map(product => {
+                                return `
+                                    <tr>
+                                        <td>${product.quantity}</td>
+                                        <td>${product.description}</td>
+                                        <td><strong>${product.productCode}</strong></td>
+                                        <td>${product.caseSize}</td>
+                                        <td>£${product.unitPrice.toFixed(2)}</td>
+                                        <td>£${product.netPrice.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // UI Functions for Approval Interface
+        function showApprovalInterface(approvalItems) {
+            const categories = categorizeApprovals(approvalItems);
+            
+            // Update stats
+            document.getElementById('autoApprovedCount').textContent = approvalStats.autoApproved;
+            document.getElementById('needsApprovalCount').textContent = approvalStats.needsApproval;
+            document.getElementById('needsAttentionCount').textContent = approvalStats.needsAttention;
+            document.getElementById('avgConfidence').textContent = approvalStats.avgConfidence + '%';
+            
+            // Show categories
+            if (categories.autoApprove.length > 0) {
+                showApprovalCategory('autoApprovedCategory', 'autoApprovedItems', categories.autoApprove);
+            }
+            
+            if (categories.needsApproval.length > 0) {
+                showApprovalCategory('needsApprovalCategory', 'needsApprovalItems', categories.needsApproval);
+            }
+            
+            if (categories.needsAttention.length > 0) {
+                showApprovalCategory('needsAttentionCategory', 'needsAttentionItems', categories.needsAttention);
+            }
+            
+            updateApprovalSummary();
+            document.getElementById('approvalSection').style.display = 'block';
+        }
+        
+        function showApprovalCategory(categoryId, itemsId, items) {
+            document.getElementById(categoryId).style.display = 'block';
+            const container = document.getElementById(itemsId);
+            container.innerHTML = '';
+            
+            items.forEach((item, index) => {
+                const itemElement = createApprovalItem(item, index);
+                container.appendChild(itemElement);
+            });
+        }
+        
+        function createApprovalItem(item, index) {
+            const div = document.createElement('div');
+            const itemId = `approval-${item.originalCode}-${index}`;
+            
+            let categoryClass = 'mapping-item';
+            let confidenceClass = 'confidence-medium';
+            
+            if (item.category === 'auto_approve') {
+                categoryClass += ' auto-approved';
+                confidenceClass = 'confidence-high';
+            } else if (item.category === 'needs_attention') {
+                categoryClass += ' dangerous';
+                confidenceClass = 'confidence-low';
+            } else {
+                categoryClass += ' needs-approval';
+            }
+            
+            const confidencePercent = Math.round(item.confidence * 100);
+            
+            div.className = categoryClass;
+            div.innerHTML = `
+                <div class="mapping-header">
+                    <div class="mapping-flow">
+                        <span class="original-code">${item.originalCode}</span>
+                        <span class="arrow">→</span>
+                        <span class="suggested-mapping">${item.suggestedMapping}</span>
+                    </div>
+                    <span class="confidence-badge ${confidenceClass}">${confidencePercent}% Confidence</span>
+                </div>
+                
+                ${item.warnings.length > 0 ? `
+                    <div class="warning-box">
+                        <strong>⚠️ ATTENTION:</strong> ${item.warnings.join(' • ')}
+                    </div>
+                ` : ''}
+                
+                <div class="reasoning">${item.reasoning}</div>
+                
+                ${item.category !== 'auto_approve' ? generateApprovalActions(item, itemId) : ''}
+                
+                <div class="edit-mapping" id="${itemId}-edit">
+                    <strong>Manual mapping for ${item.originalCode}:</strong>
+                    <input type="text" id="${itemId}-input" placeholder="Enter correct mapping" value="${item.suggestedMapping}">
+                    <button class="btn btn-approve" onclick="saveCustomMapping('${itemId}', '${item.originalCode}')">Save</button>
+                    <button class="btn" onclick="cancelEdit('${itemId}-edit')" style="background: #6c757d; color: white;">Cancel</button>
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        function generateApprovalActions(item, itemId) {
+            let actions = `<div class="mapping-actions">`;
+            
+            if (item.originalCode === 'GRBS') {
+                // Special case for GRBS/GRWS confusion
+                actions += `
+                    <button class="btn btn-approve" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_BLACK')">✅ Black Grapes</button>
+                    <button class="btn btn-alt" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_WHITE')">🍇 White Grapes</button>
+                    <button class="btn btn-edit" onclick="showEdit('${itemId}-edit')">✏️ Something Else</button>
+                `;
+            } else if (item.originalCode === 'GRWS') {
+                actions += `
+                    <button class="btn btn-approve" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_WHITE')">✅ White Grapes</button>
+                    <button class="btn btn-alt" onclick="approveMapping('${itemId}', '${item.originalCode}', 'GRAPES_BLACK')">🍇 Black Grapes</button>
+                    <button class="btn btn-edit" onclick="showEdit('${itemId}-edit')">✏️ Something Else</button>
+                `;
+            } else {
+                actions += `
+                    <button class="btn btn-approve" onclick="approveMapping('${itemId}', '${item.originalCode}', '${item.suggestedMapping}')">✅ Approve</button>
+                    <button class="btn btn-edit" onclick="showEdit('${itemId}-edit')">✏️ Edit</button>
+                    <button class="btn btn-reject" onclick="rejectMapping('${itemId}', '${item.originalCode}')">❌ Reject</button>
+                `;
+            }
+            
+            actions += `</div>`;
+            return actions;
+        }
+        
+        // Approval Interaction Functions
+        function approveMapping(itemId, productCode, mapping) {
+            // Update the mapping
+            productMappings.set(productCode, mapping);
+            
+            // Learn from this approval (SPEED IMPROVEMENT!)
+            learnFromCorrection('product', productCode, mapping);
+            
+            // Learn customer-specific pattern for faster future processing
+            const customerCode = getCurrentCustomerForProduct(productCode);
+            if (customerCode) {
+                businessRules.learnCustomerPattern(customerCode, productCode, mapping);
+            }
+            
+            // Update pending approvals
+            pendingApprovals.set(productCode, {
+                approved: true,
+                finalMapping: mapping,
+                timestamp: Date.now()
+            });
+            
+            // Update UI
+            const element = document.getElementById(itemId);
+            if (element) {
+                element.style.opacity = '0.7';
+                element.style.borderColor = '#28a745';
+                const actions = element.querySelector('.mapping-actions');
+                if (actions) {
+                    actions.innerHTML = `<div style="color: #28a745; font-weight: bold;">✅ Approved: ${mapping}</div>`;
+                }
+            }
+            
+            updateApprovalSummary();
+            console.log(`✅ Approved: ${productCode} → ${mapping} (Learning for faster processing)`);
+        }
+        
+        function getCurrentCustomerForProduct(productCode) {
+            // Find which customer this product belongs to
+            for (let order of processedOrders) {
+                const product = order.products.find(p => p.productCode === productCode);
+                if (product) {
+                    return order.customerCode;
+                }
+            }
+            return null;
+        }
+        
+        function rejectMapping(itemId, productCode) {
+            // Remove from mappings if it exists
+            productMappings.delete(productCode);
+            
+            // Update pending approvals
+            pendingApprovals.set(productCode, {
+                approved: false,
+                rejected: true,
+                timestamp: Date.now()
+            });
+            
+            // Update UI
+            const element = document.getElementById(itemId);
+            if (element) {
+                element.style.opacity = '0.7';
+                element.style.borderColor = '#dc3545';
+                const actions = element.querySelector('.mapping-actions');
+                if (actions) {
+                    actions.innerHTML = `<div style="color: #dc3545; font-weight: bold;">❌ Rejected - needs manual mapping</div>`;
+                }
+            }
+            
+            updateApprovalSummary();
+            console.log(`❌ Rejected mapping for: ${productCode}`);
+        }
+        
+        function showEdit(editId) {
+            document.getElementById(editId).style.display = 'block';
+        }
+        
+        function cancelEdit(editId) {
+            document.getElementById(editId).style.display = 'none';
+        }
+        
+        function saveCustomMapping(itemId, productCode) {
+            const input = document.getElementById(`${itemId}-input`);
+            const newMapping = input.value.trim().toUpperCase();
+            
+            if (!newMapping) {
+                alert('Please enter a mapping value');
+                return;
+            }
+            
+            // Approve with custom mapping
+            approveMapping(itemId, productCode, newMapping);
+            
+            // Hide edit interface
+            cancelEdit(`${itemId}-edit`);
+            
+            console.log(`📝 Custom mapping: ${productCode} → ${newMapping}`);
+        }
+        
+        function updateApprovalSummary() {
+            const totalPending = Array.from(pendingApprovals.values());
+            const approvedCount = totalPending.filter(p => p.approved).length;
+            const rejectedCount = totalPending.filter(p => p.rejected).length;
+            const totalNeeded = approvalStats.needsApproval + approvalStats.needsAttention;
+            const remainingCount = totalNeeded - approvedCount - rejectedCount;
+            
+            const summaryEl = document.getElementById('approvalSummary');
+            const proceedBtn = document.getElementById('proceedBtn');
+            
+            if (remainingCount > 0) {
+                summaryEl.textContent = `${approvedCount} approved, ${remainingCount} remaining`;
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = `⏳ ${remainingCount} items need approval`;
+            } else {
+                summaryEl.textContent = `All items processed! ${approvedCount} approved, ${rejectedCount} rejected`;
+                proceedBtn.disabled = false;
+                proceedBtn.textContent = '✅ All Approved - Generate Excel';
+            }
+        }
+        
+        function proceedToExport() {
+            // Apply all approved mappings to the orders
+            processedOrders.forEach(order => {
+                order.products = order.products.map(product => {
+                    const approval = pendingApprovals.get(product.productCode);
+                    if (approval && approval.approved) {
+                        product.mappedCode = approval.finalMapping;
+                    } else {
+                        product.mappedCode = productMappings.get(product.productCode) || product.productCode;
+                    }
+                    return product;
+                });
+            });
+            
+            // Hide approval section and show export
+            document.getElementById('approvalSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Update the results section with final mappings
+            prepareResultsSection();
+            
+            // Scroll to export section
+            document.querySelector('.export-section').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showAllDetails() {
+            // Toggle detailed view of all items
+            alert('Detailed view feature - would show expanded info for all products');
+        }
+        
+        // Speed Mode Configuration
+        function updateSpeedMode(mode) {
+            businessRules.speedMode = mode;
+            
+            const explanations = {
+                careful: '<strong>Careful Mode:</strong> Always requires human approval for similar codes like GRWS/GRBS. Safest but slowest.',
+                balanced: '<strong>Balanced Mode:</strong> After 3 consistent choices, system learns your preferences but still asks for confirmation on risky items.',
+                fast: '<strong>Fast Mode:</strong> After learning your patterns, automatically approves dangerous codes if confidence is high. Fastest but requires trust in the system.'
+            };
+            
+            document.getElementById('speedModeExplanation').innerHTML = explanations[mode];
+            
+            // Save the preference
+            try {
+                localStorage.setItem('speedMode', mode);
+            } catch (error) {
+                console.warn('Could not save speed mode preference');
+            }
+            
+            console.log(`Speed mode updated to: ${mode}`);
+        }
+        
+        // Load speed mode preference on startup
+        function loadSpeedModePreference() {
+            try {
+                const savedMode = localStorage.getItem('speedMode') || 'balanced';
+                businessRules.speedMode = savedMode;
+                
+                const radio = document.querySelector(`input[name="speedMode"][value="${savedMode}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    updateSpeedMode(savedMode);
+                }
+            } catch (error) {
+                console.warn('Could not load speed mode preference');
+            }
+        }
+        
+        // Prepare results section for after approval
+        function prepareResultsSection() {
+            const ordersContainer = document.getElementById('ordersContainer');
+            ordersContainer.innerHTML = '';
+            
+            // Display each order
+            processedOrders.forEach((order, index) => {
+                const orderCard = createOrderCard(order, index);
+                ordersContainer.appendChild(orderCard);
+            });
+        }
+        
+        // Create order card HTML with approval status
+        function createOrderCard(order, index) {
+            const card = document.createElement('div');
+            card.className = 'order-card';
+            
+            const customerMapping = customerMappings.get(order.customerCode) || 'UNKNOWN';
+            
+            card.innerHTML = `
+                <div class="order-header">
+                    <h3>Order ${index + 1}: ${order.filename}</h3>
+                    <div class="order-meta">
+                        <div><strong>Type:</strong> ${order.type}</div>
+                        <div><strong>PO Number:</strong> ${order.poNumber}</div>
+                        <div><strong>Customer:</strong> ${order.customerName} (${order.customerCode})</div>
+                        <div><strong>Order Date:</strong> ${order.orderDate}</div>
+                        <div><strong>Delivery Date:</strong> ${order.deliveryDate}</div>
+                        <div><strong>Total:</strong> £${order.total.toFixed(2)}</div>
+                    </div>
+                </div>
+                <div class="order-body">
+                    <h4>Products (${order.products.length} items)</h4>
+                    <table class="products-table">
+                        <thead>
+                            <tr>
+                                <th>Qty</th>
+                                <th>Description</th>
+                                <th>Code</th>
+                                <th>Mapped To</th>
+                                <th>Case Size</th>
+                                <th>Unit Price</th>
+                                <th>Net</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${order.products.map(product => {
+                                const approval = pendingApprovals.get(product.productCode);
+                                const mappedTo = product.mappedCode || 'Pending Approval';
+                                let statusClass, statusText;
+                                
+                                if (approval && approval.approved) {
+                                    statusClass = 'status-success';
+                                    statusText = 'Approved';
+                                } else if (approval && approval.rejected) {
+                                    statusClass = 'status-error';
+                                    statusText = 'Rejected';
+                                } else {
+                                    statusClass = 'status-warning';
+                                    statusText = 'Pending';
+                                }
+                                
+                                return `
+                                    <tr>
+                                        <td>${product.quantity}</td>
+                                        <td>${product.description}</td>
+                                        <td>${product.productCode}</td>
+                                        <td><strong>${mappedTo}</strong></td>
+                                        <td>${product.caseSize}</td>
+                                        <td>£${product.unitPrice.toFixed(2)}</td>
+                                        <td>£${product.netPrice.toFixed(2)}</td>
+                                        <td><span class="status ${statusClass}">${statusText}</span></td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        // Export to Excel in Freshware format
+        function exportToExcel() {
+            const wb = XLSX.utils.book_new();
+            const wsData = [];
+            
+            // Add header row (79 columns from your example)
+            const headers = [
+                "Name", "Email", "Financial Status", "Paid at", "Fulfillment Status", "Fulfilled at",
+                "Accepts Marketing", "Currency", "Subtotal", "Shipping", "Taxes", "Total", 
+                "Discount Code", "Discount Amount", "Shipping Method", "Created at", 
+                "Lineitem quantity", "Lineitem name", "Lineitem price", "Lineitem compare at price",
+                "Lineitem sku", "Lineitem requires shipping", "Lineitem taxable", "Lineitem fulfillment status",
+                "Billing Name", "Billing Street", "Billing Address1", "Billing Address2", "Billing Company",
+                "Billing City", "Billing Zip", "Billing Province", "Billing Country", "Billing Phone",
+                "Shipping Name", "Shipping Street", "Shipping Address1", "Shipping Address2", "Shipping Company",
+                "Shipping City", "Shipping Zip", "Shipping Province", "Shipping Country", "Shipping Phone",
+                "Notes", "Note Attributes", "Cancelled at", "Payment Method", "Payment Reference",
+                "Refunded Amount", "Vendor", "Outstanding Balance", "Employee", "Location", "Device ID",
+                "Id", "Tags", "Risk Level", "Source", "Lineitem discount", "Tax 1 Name", "Tax 1 Value",
+                "Tax 2 Name", "Tax 2 Value", "Tax 3 Name", "Tax 3 Value", "Tax 4 Name", "Tax 4 Value",
+                "Tax 5 Name", "Tax 5 Value", "Phone", "Receipt Number", "Duties", "Billing Province Name",
+                "Shipping Province Name", "Payment ID", "Payment Terms Name", "Next Payment Due At", "Payment References"
+            ];
+            wsData.push(headers);
+            
+            // Add data rows
+            processedOrders.forEach(order => {
+                order.products.forEach((product, productIndex) => {
+                    const row = new Array(79).fill(null);
+                    
+                    // Fill in the data we have
+                    row[0] = customerMappings.get(order.customerCode) || order.customerCode; // Name (customer code)
+                    row[1] = ""; // Email - would need to extract from original email
+                    row[2] = "pending"; // Financial Status
+                    row[4] = "fulfilled"; // Fulfillment Status
+                    row[5] = order.deliveryDate; // Fulfilled at
+                    row[6] = "yes"; // Accepts Marketing
+                    row[7] = "GBP"; // Currency
+                    row[8] = productIndex === 0 ? order.total : null; // Subtotal (only on first item)
+                    row[9] = 0; // Shipping
+                    row[10] = 0; // Taxes
+                    row[11] = productIndex === 0 ? order.total : null; // Total (only on first item)
+                    row[15] = order.orderDate; // Created at
+                    row[16] = product.quantity; // Lineitem quantity
+                    row[17] = product.description; // Lineitem name
+                    row[18] = product.unitPrice; // Lineitem price
+                    row[20] = product.productCode; // Lineitem sku (use original code: CAU, CEL, GRBS, POSW)
+                    row[21] = true; // Lineitem requires shipping
+                    row[22] = false; // Lineitem taxable
+                    row[23] = "fulfilled"; // Lineitem fulfillment status
+                    row[44] = `PO: ${order.poNumber}`; // Notes
+                    row[48] = order.poNumber; // Payment Reference (PO Number)
+                    row[54] = order.poNumber; // Id (using PO number)
+                    row[57] = "Low"; // Risk Level
+                    row[58] = "email_import"; // Source
+                    
+                    wsData.push(row);
+                });
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Orders");
+            
+            // Generate filename with current date
+            const today = new Date().toISOString().split('T')[0];
+            const filename = `freshware_orders_${today}.xlsx`;
+            
+            XLSX.writeFile(wb, filename);
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
