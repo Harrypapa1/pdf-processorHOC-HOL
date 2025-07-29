@@ -263,7 +263,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <a href="email-order-processor.html" class="nav-link">← Back to Orders</a>
+            <a href="/" class="nav-link">← Back to Orders</a>
             <h1>🔐 Customer Email Management</h1>
             <p>Secure access to customer email mappings • Password Protected</p>
         </div>
@@ -291,6 +291,7 @@
                     <p><strong>Customer Code:</strong> The short code from PDF orders (e.g., 07BELLA, 13RREST)</p>
                     <p><strong>Customer Name:</strong> Full business name (e.g., BELLA_KITCHEN, RIVER_KITCHEN)</p>
                     <p><strong>Email:</strong> Where order confirmations should be sent</p>
+                    <p><strong>📍 Note:</strong> Customer codes are case-insensitive (92table matches 92TABLE)</p>
                 </div>
             </div>
 
@@ -375,7 +376,15 @@
                 emailMappingsCache.clear();
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    // Store both original and uppercase versions for case-insensitive lookup
                     emailMappingsCache.set(data.customerCode, {
+                        email: data.email,
+                        name: data.customerName,
+                        code: data.customerCode,
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt
+                    });
+                    emailMappingsCache.set(data.customerCode.toUpperCase(), {
                         email: data.email,
                         name: data.customerName,
                         code: data.customerCode,
@@ -519,7 +528,12 @@
         function updateMappingCount() {
             const countElement = document.getElementById('mappingCount');
             if (countElement) {
-                countElement.textContent = emailMappingsCache.size;
+                // Count only original codes (not uppercase duplicates)
+                const uniqueCodes = new Set();
+                emailMappingsCache.forEach((data, code) => {
+                    uniqueCodes.add(data.code); // Use the original code from data
+                });
+                countElement.textContent = uniqueCodes.size;
             }
         }
 
@@ -531,7 +545,15 @@
         function displayCurrentMappings() {
             const displayDiv = document.getElementById('mappingsDisplay');
             
-            if (emailMappingsCache.size === 0) {
+            // Get unique customer codes (avoid showing duplicates from case-insensitive storage)
+            const uniqueMappings = new Map();
+            emailMappingsCache.forEach((data, code) => {
+                if (!uniqueMappings.has(data.code)) {
+                    uniqueMappings.set(data.code, data);
+                }
+            });
+            
+            if (uniqueMappings.size === 0) {
                 displayDiv.innerHTML = `
                     <div style="text-align: center; color: #7f8c8d; padding: 40px;">
                         <div style="font-size: 3rem; margin-bottom: 15px;">📭</div>
@@ -543,13 +565,13 @@
                 let html = `
                     <div style="background: #e8f5e8; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
                         <strong style="color: #27ae60; font-size: 1.1rem;">
-                            📊 ${emailMappingsCache.size} Customer Email Mappings Loaded
+                            📊 ${uniqueMappings.size} Customer Email Mappings Loaded
                         </strong>
                     </div>
                 `;
                 
                 // Sort mappings by customer code for better organization
-                const sortedMappings = Array.from(emailMappingsCache.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                const sortedMappings = Array.from(uniqueMappings.entries()).sort((a, b) => a[0].localeCompare(b[0]));
                 
                 sortedMappings.forEach(([customerCode, data]) => {
                     html += `
@@ -676,7 +698,7 @@
                 if (enteredPassword === null) {
                     // User clicked cancel
                     alert('Access denied. Redirecting to main page...');
-                    window.location.href = 'email-order-processor.html';
+                    window.location.href = '/';
                     return;
                 }
                 
@@ -688,7 +710,7 @@
                 attempts++;
                 if (attempts >= maxAttempts) {
                     alert('❌ Too many incorrect attempts. Redirecting to main page...');
-                    window.location.href = 'email-order-processor.html';
+                    window.location.href = '/';
                     return;
                 } else {
                     alert(`❌ Incorrect password. ${maxAttempts - attempts} attempts remaining.`);
