@@ -555,9 +555,6 @@
                     <button class="btn btn-success" onclick="exportToExcel()">
                         Download Excel File
                     </button>
-                    <button class="btn" onclick="debugEmailMappings()" style="margin-left: 10px;">
-                        🔍 Debug Email Mappings
-                    </button>
                 </div>
             </div>
         </div>
@@ -1166,26 +1163,14 @@
             // First, validate that all customers have email mappings
             const missingEmails = [];
             
-            console.log('Checking email mappings for export...');
-            console.log('Current email cache:', emailMappingsCache);
-            
             for (const order of processedOrders) {
-                console.log(`Checking order: ${order.filename}`);
-                console.log(`Customer Code: "${order.customerCode}"`);
-                console.log(`Customer Name: "${order.customerName}"`);
-                
                 const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
-                console.log(`Found email: "${customerEmail}"`);
-                
                 if (!customerEmail || customerEmail.trim() === '') {
                     missingEmails.push({
                         customerCode: order.customerCode,
                         customerName: order.customerName,
                         filename: order.filename
                     });
-                    console.log(`Missing email for: ${order.customerCode}`);
-                } else {
-                    console.log(`✅ Email found for ${order.customerCode}: ${customerEmail}`);
                 }
             }
             
@@ -1320,40 +1305,6 @@
             
             // Show success message
             alert(`✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}\n\nReady for Freshware import!`);
-        }
-        
-        // Debug function to check email mappings
-        async function debugEmailMappings() {
-            console.log('=== EMAIL MAPPING DEBUG ===');
-            await loadCustomerEmailsFromFirestore(); // Force reload
-            
-            console.log('All cached mappings:');
-            emailMappingsCache.forEach((email, code) => {
-                console.log(`"${code}" → "${email}"`);
-            });
-            
-            // Test specific lookups
-            console.log('\n=== TESTING LOOKUPS ===');
-            const testCodes = ['92table', '92TABLE', '92Table'];
-            for (const code of testCodes) {
-                const email = await getCustomerEmail(code, '');
-                console.log(`getCustomerEmail("${code}", "") → "${email}"`);
-            }
-            
-            // Show in alert too
-            let debugInfo = 'Email Mappings Debug:\n\n';
-            let count = 0;
-            emailMappingsCache.forEach((email, code) => {
-                if (count < 10) { // Show first 10
-                    debugInfo += `"${code}" → "${email}"\n`;
-                    count++;
-                }
-            });
-            
-            debugInfo += `\nTotal mappings: ${emailMappingsCache.size}`;
-            debugInfo += '\nCheck browser console (F12) for full details.';
-            
-            alert(debugInfo);
         }
         
         // Initialize when page loads
