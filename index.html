@@ -604,7 +604,8 @@
                                     <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
                                 </div>
                                 <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
-                                    💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes
+                                    💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes<br>
+                                    📦 SKU suffixes: Case contains "kg" → +KG, "box" → +B, otherwise → +E
                                 </div>
                             </div>
                             <div>
@@ -727,6 +728,21 @@
 
         function getVendorForProduct(productCode) {
             return vendorMappings.get(productCode) || 'Osolocal2U';
+        }
+
+        // Get SKU suffix based on case size for Freshware
+        function getSKUSuffix(caseSize) {
+            if (!caseSize) return 'E'; // Default to EACH if no case size
+            
+            const caseLower = caseSize.toLowerCase();
+            
+            if (caseLower.includes('kg') || caseLower.includes('kilo')) {
+                return 'KG';
+            } else if (caseLower.includes('box') || caseLower.includes('bx')) {
+                return 'B';
+            } else {
+                return 'E'; // Default to EACH for everything else (including "each", "1x", etc.)
+            }
         }
 
         // Firebase Functions
@@ -1064,6 +1080,7 @@
                 `;
             } else {
                 order.products.forEach((product, index) => {
+                    const skuWithSuffix = product.productCode + getSKUSuffix(product.caseSize);
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="editable-cell">
@@ -1075,6 +1092,9 @@
                             <input type="text" value="${product.productCode}" 
                                    onchange="updateProductField(${index}, 'productCode', this.value)" 
                                    style="text-transform: uppercase;" />
+                            <div style="font-size: 0.7rem; color: #3498db; margin-top: 2px;">
+                                Export: ${skuWithSuffix}
+                            </div>
                         </td>
                         <td>${product.caseSize}</td>
                         <td>£${product.unitPrice.toFixed(2)}</td>
@@ -1194,6 +1214,19 @@
                         
                     } else if (field === 'productCode') {
                         order.products[productIndex].productCode = value.toUpperCase();
+                        
+                        // Update the export SKU display immediately
+                        const row = document.querySelector(`#productsTableBody tr:nth-child(${productIndex + 1})`);
+                        if (row) {
+                            const skuCell = row.querySelector('td:nth-child(3)');
+                            if (skuCell) {
+                                const exportDiv = skuCell.querySelector('div');
+                                if (exportDiv) {
+                                    const skuWithSuffix = order.products[productIndex].productCode + getSKUSuffix(order.products[productIndex].caseSize);
+                                    exportDiv.textContent = `Export: ${skuWithSuffix}`;
+                                }
+                            }
+                        }
                     }
                     
                     // Update processed orders array
@@ -1568,7 +1601,7 @@
                     row[16] = product.quantity; // Lineitem quantity
                     row[17] = product.description; // Lineitem name
                     row[18] = product.unitPrice; // Lineitem price
-                    row[20] = product.productCode; // Lineitem sku
+                    row[20] = product.productCode + getSKUSuffix(product.caseSize); // Lineitem sku with suffix
                     row[21] = "TRUE"; // Lineitem requires shipping
                     row[22] = "FALSE"; // Lineitem taxable
                     row[23] = "fulfilled"; // Lineitem fulfillment status
