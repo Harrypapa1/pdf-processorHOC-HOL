@@ -1154,6 +1154,38 @@
         
         // Export to Excel in Freshware format with email lookup
         async function exportToExcel() {
+            // First, validate that all customers have email mappings
+            const missingEmails = [];
+            
+            for (const order of processedOrders) {
+                const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
+                if (!customerEmail || customerEmail.trim() === '') {
+                    missingEmails.push({
+                        customerCode: order.customerCode,
+                        customerName: order.customerName,
+                        filename: order.filename
+                    });
+                }
+            }
+            
+            // If any emails are missing, show alert and stop export
+            if (missingEmails.length > 0) {
+                let alertMessage = '❌ Cannot export! Missing customer email mappings:\n\n';
+                
+                missingEmails.forEach(missing => {
+                    alertMessage += `• ${missing.customerCode} (${missing.customerName}) - from ${missing.filename}\n`;
+                });
+                
+                alertMessage += '\n🔧 Please add these email mappings first:\n';
+                alertMessage += '1. Click "Manage Emails →" in the top right\n';
+                alertMessage += '2. Add the missing customer emails\n';
+                alertMessage += '3. Return here and export again\n\n';
+                alertMessage += 'Export cancelled - no file was created.';
+                
+                alert(alertMessage);
+                return; // Stop the export process
+            }
+            
             const wb = XLSX.utils.book_new();
             const wsData = [];
             
@@ -1264,6 +1296,9 @@
             const filename = `freshware_orders_${today}.xlsx`;
             
             XLSX.writeFile(wb, filename);
+            
+            // Show success message
+            alert(`✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}\n\nReady for Freshware import!`);
         }
         
         // Initialize when page loads
