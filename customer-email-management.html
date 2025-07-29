@@ -3,12 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Order Processing System</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-    </script>
+    <title>Customer Email Management - Order Processing System</title>
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
@@ -23,7 +18,7 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -52,7 +47,7 @@
         
         .nav-link {
             position: absolute;
-            right: 30px;
+            left: 30px;
             top: 50%;
             transform: translateY(-50%);
             color: white;
@@ -65,54 +60,64 @@
         
         .nav-link:hover {
             background: rgba(255,255,255,0.3);
-            transform: translateY(-50%) translateX(-5px);
+            transform: translateY(-50%) translateX(5px);
         }
         
         .main-content {
             padding: 40px;
         }
         
-        .upload-section {
-            border: 3px dashed #e3e8ef;
-            border-radius: 15px;
-            padding: 60px 40px;
-            text-align: center;
-            margin-bottom: 30px;
+        .admin-section {
             background: #f8fafc;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 2px solid #e3e8ef;
         }
         
-        .upload-section:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-        
-        .upload-section.dragover {
-            border-color: #667eea;
-            background: #f0f4ff;
-            transform: scale(1.02);
-        }
-        
-        .upload-icon {
-            font-size: 4rem;
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-        
-        .upload-text h3 {
-            font-size: 1.5rem;
+        .admin-section h3 {
             color: #2c3e50;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
         }
         
-        .upload-text p {
-            color: #7f8c8d;
-            font-size: 1.1rem;
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 15px;
+            margin: 20px 0;
         }
         
-        .file-input {
-            display: none;
+        .admin-input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .admin-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .admin-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 120px;
+            margin: 10px 0;
+        }
+        
+        .admin-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .btn {
@@ -124,347 +129,12 @@
             font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin: 10px;
+            margin: 5px;
         }
         
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .info-section {
-            background: #e8f5e8;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 30px 0;
-            border-left: 5px solid #27ae60;
-            text-align: center;
-        }
-        
-        .info-section h3 {
-            color: #27ae60;
-            margin-bottom: 15px;
-        }
-        
-        .info-section p {
-            color: #2c3e50;
-            line-height: 1.6;
-            margin: 5px 0;
-        }
-        
-        .info-section a {
-            color: #27ae60;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        
-        .info-section a:hover {
-            text-decoration: underline;
-        }
-        
-        .processing-section {
-            display: none;
-            background: #f8fafc;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-        }
-        
-        .progress-bar {
-            background: #e3e8ef;
-            border-radius: 10px;
-            height: 10px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-        
-        .progress-fill {
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        
-        /* New Two-Column Layout */
-        .pdf-viewer-section {
-            display: none;
-            margin: 30px 0;
-        }
-        
-        .viewer-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 20px 0;
-        }
-        
-        .pdf-viewer {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .pdf-viewer-header {
-            background: #f8fafc;
-            padding: 20px;
-            border-bottom: 1px solid #e3e8ef;
-            text-align: center;
-        }
-        
-        .pdf-viewer-header h3 {
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        
-        .pdf-canvas-container {
-            padding: 20px;
-            text-align: center;
-            background: #f8fafc;
-            min-height: 600px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .pdf-canvas {
-            max-width: 100%;
-            max-height: 600px;
-            border: 1px solid #e3e8ef;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .pdf-controls {
-            padding: 15px 20px;
-            background: white;
-            border-top: 1px solid #e3e8ef;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .pdf-control-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        .pdf-control-btn:hover {
-            background: #5a67d8;
-        }
-        
-        .pdf-control-btn:disabled {
-            background: #cbd5e0;
-            cursor: not-allowed;
-        }
-        
-        .page-info {
-            color: #7f8c8d;
-            font-size: 0.9rem;
-        }
-        
-        .extracted-data {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .extracted-data-header {
-            background: #f8fafc;
-            padding: 20px;
-            border-bottom: 1px solid #e3e8ef;
-        }
-        
-        .extracted-data-header h3 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .edit-toggle-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-        }
-        
-        .edit-toggle-btn:hover {
-            background: #2980b9;
-            transform: translateY(-1px);
-        }
-        
-        .edit-toggle-btn.editing {
-            background: #27ae60;
-        }
-        
-        .edit-toggle-btn.editing:hover {
-            background: #229954;
-        }
-        
-        .editable-field {
-            background: transparent;
-            border: 1px solid transparent;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: inherit;
-            font-size: inherit;
-            color: inherit;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-        
-        .editable-field:focus {
-            outline: none;
-            border-color: #3498db;
-            background: #f8fafc;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-        
-        .editable-field.editing {
-            border-color: #e3e8ef;
-            background: white;
-        }
-        
-        .editable-cell {
-            position: relative;
-        }
-        
-        .editable-cell input {
-            border: 1px solid transparent;
-            background: transparent;
-            padding: 2px 5px;
-            border-radius: 3px;
-            width: 100%;
-            font-family: inherit;
-            font-size: inherit;
-        }
-        
-        .editable-cell input:focus {
-            outline: none;
-            border-color: #3498db;
-            background: #f8fafc;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-        }
-        
-        .editable-cell.editing input {
-            border-color: #e3e8ef;
-            background: white;
-        }
-        
-        .save-changes-btn {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin: 15px 0;
-            transition: all 0.3s ease;
-        }
-        
-        .save-changes-btn:hover {
-            background: #229954;
-            transform: translateY(-1px);
-        }
-        
-        .changes-indicator {
-            color: #e67e22;
-            font-weight: bold;
-            font-size: 0.8rem;
-            margin-left: 10px;
-        }
-        
-        .order-summary {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            font-size: 0.9rem;
-            color: #7f8c8d;
-        }
-        
-        .extracted-data-body {
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
-            max-height: 600px;
-        }
-        
-        .products-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-        }
-        
-        .products-table th,
-        .products-table td {
-            padding: 12px 10px;
-            text-align: left;
-            border-bottom: 1px solid #e3e8ef;
-            font-size: 0.85rem;
-        }
-        
-        .products-table th {
-            background: #f8fafc;
-            font-weight: 600;
-            color: #2c3e50;
-            position: sticky;
-            top: 0;
-        }
-        
-        .results-section {
-            display: none;
-            margin: 30px 0;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            color: #7f8c8d;
-            font-size: 0.9rem;
-        }
-        
-        .export-section {
-            background: #e8f5e8;
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            margin: 30px 0;
         }
         
         .btn-success {
@@ -475,41 +145,106 @@
             box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
         }
         
-        .multi-file-tabs {
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+        
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid #667eea;
+        }
+        
+        .status-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .status-label {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+        
+        .mappings-display {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e3e8ef;
+        }
+        
+        .mapping-item {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
         }
         
-        .file-tab {
-            background: #e3e8ef;
+        .mapping-item:last-child {
+            border-bottom: none;
+        }
+        
+        .mapping-code {
+            font-weight: 600;
             color: #2c3e50;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 25px;
-            cursor: pointer;
+        }
+        
+        .mapping-email {
+            color: #7f8c8d;
             font-size: 0.9rem;
-            transition: all 0.3s ease;
-            max-width: 200px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
-        .file-tab.active {
-            background: #667eea;
+        .delete-btn {
+            background: #e74c3c;
             color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         
-        .file-tab:hover {
-            transform: translateY(-2px);
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+        
+        .help-section {
+            background: #e8f5e8;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 5px solid #27ae60;
+        }
+        
+        .help-section h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+        
+        .help-section p {
+            color: #2c3e50;
+            line-height: 1.6;
+            margin: 5px 0;
         }
         
         @media (max-width: 768px) {
-            .viewer-container {
+            .admin-grid {
                 grid-template-columns: 1fr;
-                gap: 20px;
+                gap: 10px;
             }
             
             .nav-link {
@@ -522,154 +257,91 @@
             .header {
                 text-align: left;
             }
-            
-            .order-summary {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <a href="/customer-email-management.html" class="nav-link">Manage Emails →</a>
-            <h1>📧 Email Order Processing</h1>
-            <p>Transform PDF orders into Excel files for Freshware</p>
+            <a href="/" class="nav-link">← Back to Orders</a>
+            <h1>🔐 Customer Email Management</h1>
+            <p>Secure access to customer email mappings • Password Protected</p>
         </div>
         
         <div class="main-content">
-            <!-- File Upload Section -->
-            <div class="upload-section" id="uploadArea">
-                <div class="upload-icon">📎</div>
-                <div class="upload-text">
-                    <h3>Drop PDF files here or click to browse</h3>
-                    <p>Support for consolidated and standard purchase orders</p>
-                </div>
-                <input type="file" id="fileInput" class="file-input" multiple accept=".pdf">
-                <button class="btn" onclick="document.getElementById('fileInput').click()">
-                    Choose Files
-                </button>
+            <!-- Status Card -->
+            <div class="status-card">
+                <div class="status-number" id="mappingCount">0</div>
+                <div class="status-label">Customer email mappings loaded</div>
             </div>
 
-            <!-- Information Section -->
-            <div class="info-section">
-                <h3>🔧 Customer Email Setup Required</h3>
-                <p>Before processing orders, make sure customer email mappings are configured.</p>
-                <p>Click <a href="/customer-email-management.html">Manage Emails</a> to set up customer email addresses for order notifications.</p>
-            </div>
-            
-            <!-- Processing Section -->
-            <div class="processing-section" id="processingSection">
-                <h3>🔄 Processing Orders...</h3>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <p id="processingStatus">Initializing...</p>
-            </div>
-            
-            <!-- PDF Viewer Section -->
-            <div class="pdf-viewer-section" id="pdfViewerSection">
-                <div class="multi-file-tabs" id="fileTabsContainer"></div>
+            <!-- Single Customer Entry -->
+            <div class="admin-section">
+                <h3>📝 Add Single Customer Email</h3>
                 
-                <div class="viewer-container">
-                    <!-- PDF Viewer -->
-                    <div class="pdf-viewer">
-                        <div class="pdf-viewer-header">
-                            <h3 id="currentFileName">PDF Document</h3>
-                            <p style="color: #7f8c8d; font-size: 0.9rem;">Original order document</p>
-                        </div>
-                        <div class="pdf-canvas-container">
-                            <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
-                        </div>
-                        <div class="pdf-controls">
-                            <button class="pdf-control-btn" id="prevPageBtn">← Previous</button>
-                            <span class="page-info" id="pageInfo">Page 1 of 1</span>
-                            <button class="pdf-control-btn" id="nextPageBtn">Next →</button>
-                            <button class="pdf-control-btn" onclick="zoomOut()">Zoom -</button>
-                            <button class="pdf-control-btn" onclick="zoomIn()">Zoom +</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Extracted Data -->
-                    <div class="extracted-data">
-                        <div class="extracted-data-header">
-                            <div>
-                                <h3>📊 Extracted Order Data</h3>
-                                <div class="order-summary" id="orderSummary">
-                                    <div><strong>Type:</strong> <span id="orderType">-</span></div>
-                                    <div><strong>PO Number:</strong> <input class="editable-field" id="orderPO" value="-" onchange="markAsChanged()" disabled></div>
-                                    <div><strong>Customer:</strong> <span id="orderCustomer">-</span></div>
-                                    <div><strong>Order Date:</strong> <input class="editable-field" id="orderDate" type="date" onchange="markAsChanged()" disabled></div>
-                                    <div><strong>Delivery Date:</strong> <input class="editable-field" id="deliveryDate" type="date" onchange="markAsChanged()" disabled></div>
-                                    <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
-                                </div>
-                                <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
-                                    💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes
-                                </div>
-                            </div>
-                            <div>
-                                <button class="edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()">
-                                    ✏️ Edit Data
-                                </button>
-                                <button class="save-changes-btn" id="saveChangesBtn" onclick="saveChanges()" style="display: none;">
-                                    💾 Save Changes
-                                </button>
-                                <span class="changes-indicator" id="changesIndicator" style="display: none;">● Changes made</span>
-                            </div>
-                        </div>
-                        <div class="extracted-data-body">
-                            <table class="products-table" id="productsTable">
-                                <thead>
-                                    <tr>
-                                        <th>Qty <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
-                                        <th>Description</th>
-                                        <th>SKU <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
-                                        <th>Case</th>
-                                        <th>Unit £</th>
-                                        <th>Net £</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productsTableBody">
-                                    <tr>
-                                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
-                                            Upload a PDF to see extracted product data
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Results Summary Section -->
-            <div class="results-section" id="resultsSection">
-                <div class="stats-grid" id="statsGrid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalOrders">0</div>
-                        <div class="stat-label">Orders Processed</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalProducts">0</div>
-                        <div class="stat-label">Products Found</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="mappedProducts">0</div>
-                        <div class="stat-label">Mapped Products</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalValue">£0</div>
-                        <div class="stat-label">Total Value</div>
-                    </div>
+                <div class="admin-grid">
+                    <input type="text" id="customerCode" placeholder="Customer Code (e.g., 07BELLA)" class="admin-input">
+                    <input type="text" id="customerName" placeholder="Customer Name" class="admin-input">
+                    <input type="email" id="customerEmail" placeholder="customer@email.com" class="admin-input">
+                    <button class="btn btn-success" onclick="addSingleCustomerEmail()">Add Email</button>
                 </div>
                 
-                <!-- Export Section -->
-                <div class="export-section">
-                    <h3>📊 Ready to Export</h3>
-                    <p>All orders have been processed and are ready for Freshware import</p>
-                    <button class="btn btn-success" onclick="exportToExcel()">
-                        Download Excel File
-                    </button>
+                <div class="help-section">
+                    <h4>💡 How to use:</h4>
+                    <p><strong>Customer Code:</strong> The short code from PDF orders (e.g., 07BELLA, 13RREST)</p>
+                    <p><strong>Customer Name:</strong> Full business name (e.g., BELLA_KITCHEN, RIVER_KITCHEN)</p>
+                    <p><strong>Email:</strong> Where order confirmations should be sent</p>
+                    <p><strong>📍 Note:</strong> Customer codes are case-insensitive (92table matches 92TABLE)</p>
+                </div>
+            </div>
+
+            <!-- Batch Upload Section -->
+            <div class="admin-section">
+                <h3>📊 Batch Upload CSV</h3>
+                
+                <div>
+                    <textarea id="csvEmails" rows="8" placeholder="CustomerCode,CustomerName,Email&#10;07BELLA,BELLA_KITCHEN,bella@example.com&#10;13RREST,RIVER_KITCHEN,river@example.com&#10;92TABLE,TABLE_KITCHEN,table@example.com" class="admin-textarea"></textarea>
+                    <button class="btn btn-success" onclick="batchUploadEmails()">Upload Batch</button>
+                </div>
+                
+                <div class="help-section">
+                    <h4>📋 CSV Format:</h4>
+                    <p>Each line should contain: <strong>CustomerCode,CustomerName,Email</strong></p>
+                    <p>No headers needed - just paste your data and click Upload Batch</p>
+                </div>
+            </div>
+
+            <!-- Current Mappings Display -->
+            <div class="admin-section">
+                <h3>📋 Current Email Mappings</h3>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn" onclick="loadAndDisplayMappings()">Refresh Mappings</button>
+                    <button class="btn btn-danger" onclick="confirmClearAllMappings()">Clear All Mappings</button>
+                </div>
+                
+                <div id="mappingsDisplay" class="mappings-display">
+                    <div style="text-align: center; color: #7f8c8d; padding: 40px;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                        Loading email mappings...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export/Import Section -->
+            <div class="admin-section">
+                <h3>💾 Backup & Export</h3>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn" onclick="exportMappingsToCSV()">Export to CSV</button>
+                    <button class="btn" onclick="downloadMappingsBackup()">Download Backup</button>
+                </div>
+                
+                <div class="help-section">
+                    <h4>🛡️ Security & Backup:</h4>
+                    <p>This page is password protected to secure customer data</p>
+                    <p>Regularly export your email mappings as a backup</p>
+                    <p>Keep a local copy in case you need to restore the database</p>
                 </div>
             </div>
         </div>
@@ -690,44 +362,9 @@
         const db = firebase.firestore();
 
         // Global variables
-        let processedOrders = [];
-        let customerMappings = new Map();
-        let productMappings = new Map();
         let emailMappingsCache = new Map();
         let lastCacheUpdate = 0;
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-        // PDF Viewer variables
-        let currentPDF = null;
-        let currentPage = 1;
-        let totalPages = 1;
-        let currentScale = 1.2;
-        let pdfFiles = [];
-        let currentFileIndex = 0;
-
-        // Edit mode variables
-        let isEditMode = false;
-        let hasUnsavedChanges = false;
-
-        // Vendor mappings by product type
-        let vendorMappings = new Map();
-        
-        function initializeVendorMappings() {
-            // Frozen products = CoolFoodGroupMaster
-            vendorMappings.set('YRASB', 'CoolFoodGroupMaster'); // Frozen Raspberries
-            vendorMappings.set('YBLUB', 'CoolFoodGroupMaster'); // Frozen Blueberries  
-            vendorMappings.set('YSFB', 'CoolFoodGroupMaster');  // Frozen Summer Fruits
-            vendorMappings.set('YCHERB', 'CoolFoodGroupMaster'); // Frozen Cherries
-            
-            // Add more frozen product codes as needed
-            // Any product starting with 'Y' might be frozen, but we'll map specific ones
-            
-            // Fresh products = Osolocal2U (default for everything else)
-        }
-
-        function getVendorForProduct(productCode) {
-            return vendorMappings.get(productCode) || 'Osolocal2U';
-        }
 
         // Firebase Functions
         async function loadCustomerEmailsFromFirestore() {
@@ -740,871 +377,350 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     // Store both original and uppercase versions for case-insensitive lookup
-                    emailMappingsCache.set(data.customerCode, data.email);
-                    emailMappingsCache.set(data.customerCode.toUpperCase(), data.email);
-                    if (data.customerName) {
-                        emailMappingsCache.set(data.customerName, data.email);
-                        emailMappingsCache.set(data.customerName.toUpperCase(), data.email);
-                    }
+                    emailMappingsCache.set(data.customerCode, {
+                        email: data.email,
+                        name: data.customerName,
+                        code: data.customerCode,
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt
+                    });
+                    emailMappingsCache.set(data.customerCode.toUpperCase(), {
+                        email: data.email,
+                        name: data.customerName,
+                        code: data.customerCode,
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt
+                    });
                 });
                 
                 lastCacheUpdate = Date.now();
                 console.log(`Loaded ${emailMappingsCache.size} customer email mappings`);
+                updateMappingCount();
                 
                 return emailMappingsCache;
             } catch (error) {
                 console.error('Error loading customer emails:', error);
+                alert('Error loading customer emails: ' + error.message);
                 return emailMappingsCache;
             }
         }
 
-        async function getCustomerEmail(customerCode, customerName) {
-            if (Date.now() - lastCacheUpdate > CACHE_DURATION) {
-                await loadCustomerEmailsFromFirestore();
-            }
-            
-            // Try exact match first, then uppercase versions
-            return emailMappingsCache.get(customerCode) || 
-                   emailMappingsCache.get(customerCode.toUpperCase()) ||
-                   emailMappingsCache.get(customerName) || 
-                   emailMappingsCache.get(customerName.toUpperCase()) ||
-                   '';
-        }
-        
-        // Initialize known mappings
-        async function initializeMappings() {
-            // Customer mappings
-            customerMappings.set('07BELLA', 'BELLA_KITCHEN');
-            customerMappings.set('13RREST', 'RIVER_KITCHEN');
-            customerMappings.set('92TABLE', 'TABLE_KITCHEN');
-            customerMappings.set('76RICH', 'RICHMOND_HOUSE');
-            
-            // Product mappings
-            productMappings.set('AVO', 'AVOCADO_PEAR');
-            productMappings.set('KI', 'KIWI_FRUIT');
-            productMappings.set('PINL', 'PINEAPPLE_LARGE');
-            productMappings.set('CAU', 'CAULIFLOWER');
-            productMappings.set('PLUR', 'PLUMS');
-            productMappings.set('SAT', 'SATSUMAS');
-            productMappings.set('STR', 'STRAWBERRIES');
-            productMappings.set('CEL', 'CELERY');
-            productMappings.set('GRBS', 'GRAPES_BLACK'); 
-            productMappings.set('GRWS', 'GRAPES_WHITE');
-            productMappings.set('POSW', 'POTATO_SWEET');
-
-            // Initialize vendor mappings
-            initializeVendorMappings();
-
-            // Load email mappings from Firestore
-            await loadCustomerEmailsFromFirestore();
-        }
-        
-        // Initialize the application
-        async function init() {
-            await initializeMappings();
-            setupEventListeners();
-            setupPDFControls();
-            console.log('App initialized successfully');
-        }
-        
-        // Setup event listeners
-        function setupEventListeners() {
-            const uploadArea = document.getElementById('uploadArea');
-            const fileInput = document.getElementById('fileInput');
-            
-            // File input change
-            fileInput.addEventListener('change', handleFiles);
-            
-            // Drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                uploadArea.classList.remove('dragover');
-                
-                const files = Array.from(e.dataTransfer.files);
-                const pdfFiles = files.filter(f => 
-                    f.type === 'application/pdf' || 
-                    f.name.toLowerCase().endsWith('.pdf')
-                );
-                
-                if (pdfFiles.length > 0) {
-                    processFiles(pdfFiles);
-                } else {
-                    alert('Please drop PDF files only.');
-                }
-            });
-            
-            uploadArea.addEventListener('click', (e) => {
-                if (!e.target.closest('button')) {
-                    fileInput.click();
-                }
-            });
-        }
-        
-        // Setup PDF Controls
-        function setupPDFControls() {
-            document.getElementById('prevPageBtn').addEventListener('click', prevPage);
-            document.getElementById('nextPageBtn').addEventListener('click', nextPage);
-        }
-        
-        // Handle file selection
-        function handleFiles(event) {
-            const files = Array.from(event.target.files);
-            if (files.length > 0) {
-                processFiles(files);
-            }
-        }
-        
-        // Process PDF files
-        async function processFiles(files) {
-            document.getElementById('processingSection').style.display = 'block';
-            document.getElementById('pdfViewerSection').style.display = 'none';
-            document.getElementById('resultsSection').style.display = 'none';
-            
-            processedOrders = [];
-            pdfFiles = [];
-            
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                updateProgress((i / files.length) * 100, `Processing ${file.name}...`);
-                
-                try {
-                    const order = await processPDF(file);
-                    if (order) {
-                        processedOrders.push(order);
-                        pdfFiles.push({
-                            file: file,
-                            order: order,
-                            pdf: null // Will be loaded when viewed
-                        });
-                    }
-                } catch (error) {
-                    console.error(`Error processing ${file.name}:`, error);
-                    alert(`Error processing ${file.name}: ${error.message}`);
-                }
-            }
-            
-            updateProgress(100, 'Processing complete!');
-            setTimeout(() => {
-                document.getElementById('processingSection').style.display = 'none';
-                displayPDFViewer();
-                displayResults();
-            }, 1000);
-        }
-        
-        // Display PDF Viewer
-        async function displayPDFViewer() {
-            if (pdfFiles.length === 0) return;
-            
-            document.getElementById('pdfViewerSection').style.display = 'block';
-            
-            // Create file tabs
-            const tabsContainer = document.getElementById('fileTabsContainer');
-            tabsContainer.innerHTML = '';
-            
-            pdfFiles.forEach((pdfFile, index) => {
-                const tab = document.createElement('button');
-                tab.className = `file-tab ${index === 0 ? 'active' : ''}`;
-                tab.textContent = pdfFile.file.name;
-                tab.onclick = () => switchToFile(index);
-                tabsContainer.appendChild(tab);
-            });
-            
-            // Load first PDF
-            currentFileIndex = 0;
-            await loadPDFForViewing(0);
-        }
-        
-        // Switch to different file
-        async function switchToFile(index) {
-            // Check for unsaved changes
-            if (hasUnsavedChanges) {
-                const confirmSwitch = confirm('You have unsaved changes. Do you want to save them before switching files?\n\nClick OK to save, or Cancel to discard changes.');
-                if (confirmSwitch) {
-                    saveChanges();
-                } else {
-                    // Discard changes by reloading the current file
-                    hasUnsavedChanges = false;
-                    updateEditModeUI();
-                }
-            }
-            
-            // Update active tab
-            document.querySelectorAll('.file-tab').forEach((tab, i) => {
-                tab.classList.toggle('active', i === index);
-            });
-            
-            currentFileIndex = index;
-            await loadPDFForViewing(index);
-        }
-        
-        // Load PDF for viewing
-        async function loadPDFForViewing(index) {
-            const pdfFile = pdfFiles[index];
-            
+        async function addCustomerEmail(customerCode, customerName, email) {
             try {
-                if (!pdfFile.pdf) {
-                    const arrayBuffer = await pdfFile.file.arrayBuffer();
-                    pdfFile.pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                }
-                
-                currentPDF = pdfFile.pdf;
-                totalPages = currentPDF.numPages;
-                currentPage = 1;
-                
-                // Update filename display
-                document.getElementById('currentFileName').textContent = pdfFile.file.name;
-                
-                // Render first page
-                await renderPage(1);
-                
-                // Update extracted data display
-                updateExtractedDataDisplay(pdfFile.order);
-                
-                // Reset edit mode for new file
-                isEditMode = false;
-                hasUnsavedChanges = false;
-                updateEditModeUI();
-                
-            } catch (error) {
-                console.error('Error loading PDF for viewing:', error);
-            }
-        }
-        
-        // Render PDF page
-        async function renderPage(pageNum) {
-            if (!currentPDF) return;
-            
-            try {
-                const page = await currentPDF.getPage(pageNum);
-                const canvas = document.getElementById('pdfCanvas');
-                const ctx = canvas.getContext('2d');
-                
-                const viewport = page.getViewport({ scale: currentScale });
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                
-                const renderContext = {
-                    canvasContext: ctx,
-                    viewport: viewport
+                const docData = {
+                    customerCode: customerCode,
+                    customerName: customerName,
+                    email: email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
-                await page.render(renderContext).promise;
+                await db.collection('customerEmails').doc(customerCode).set(docData);
                 
-                // Update page info
-                document.getElementById('pageInfo').textContent = `Page ${pageNum} of ${totalPages}`;
+                emailMappingsCache.set(customerCode, {
+                    email: email,
+                    name: customerName,
+                    code: customerCode,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
                 
-                // Update button states
-                document.getElementById('prevPageBtn').disabled = pageNum <= 1;
-                document.getElementById('nextPageBtn').disabled = pageNum >= totalPages;
-                
+                console.log(`Added email mapping: ${customerCode} -> ${email}`);
+                updateMappingCount();
+                return true;
             } catch (error) {
-                console.error('Error rendering page:', error);
+                console.error('Error adding customer email:', error);
+                alert('Error adding customer email: ' + error.message);
+                return false;
             }
         }
-        
-        // PDF Navigation
-        function prevPage() {
-            if (currentPage <= 1) return;
-            currentPage--;
-            renderPage(currentPage);
-        }
-        
-        function nextPage() {
-            if (currentPage >= totalPages) return;
-            currentPage++;
-            renderPage(currentPage);
-        }
-        
-        function zoomIn() {
-            currentScale = Math.min(currentScale * 1.2, 3.0);
-            renderPage(currentPage);
-        }
-        
-        function zoomOut() {
-            currentScale = Math.max(currentScale / 1.2, 0.5);
-            renderPage(currentPage);
-        }
-        
-        // Update extracted data display
-        function updateExtractedDataDisplay(order) {
-            // Update order summary
-            document.getElementById('orderType').textContent = order.type;
-            document.getElementById('orderPO').value = order.poNumber || '';
-            document.getElementById('orderCustomer').textContent = `${order.customerName} (${order.customerCode})`;
-            
-            // Convert dates from DD/MM/YYYY to YYYY-MM-DD for date inputs
-            document.getElementById('orderDate').value = convertDateForInput(order.orderDate);
-            document.getElementById('deliveryDate').value = convertDateForInput(order.deliveryDate);
-            document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
-            
-            // Update products table
-            const tbody = document.getElementById('productsTableBody');
-            tbody.innerHTML = '';
-            
-            if (order.products.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
-                            No products found in this order
-                        </td>
-                    </tr>
-                `;
-            } else {
-                order.products.forEach((product, index) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td class="editable-cell">
-                            <input type="number" step="0.1" value="${product.quantity}" 
-                                   onchange="updateProductField(${index}, 'quantity', this.value)" />
-                        </td>
-                        <td>${product.description}</td>
-                        <td class="editable-cell">
-                            <input type="text" value="${product.productCode}" 
-                                   onchange="updateProductField(${index}, 'productCode', this.value)" 
-                                   style="text-transform: uppercase;" />
-                        </td>
-                        <td>${product.caseSize}</td>
-                        <td>£${product.unitPrice.toFixed(2)}</td>
-                        <td>£${product.netPrice.toFixed(2)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-            
-            // Reset edit mode
-            isEditMode = false;
-            hasUnsavedChanges = false;
-            updateEditModeUI();
-        }
-        
-        // Convert date from DD/MM/YYYY to YYYY-MM-DD
-        function convertDateForInput(dateStr) {
-            if (!dateStr || dateStr === '') return '';
-            const parts = dateStr.split('/');
-            if (parts.length === 3) {
-                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-            }
-            return dateStr;
-        }
-        
-        // Convert date from YYYY-MM-DD to DD/MM/YYYY
-        function convertDateFromInput(dateStr) {
-            if (!dateStr || dateStr === '') return '';
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-            return dateStr;
-        }
-        
-        // Toggle edit mode
-        function toggleEditMode() {
-            isEditMode = !isEditMode;
-            updateEditModeUI();
-        }
-        
-        // Update UI based on edit mode
-        function updateEditModeUI() {
-            const editBtn = document.getElementById('editToggleBtn');
-            const saveBtn = document.getElementById('saveChangesBtn');
-            const changesIndicator = document.getElementById('changesIndicator');
-            const editableFields = document.querySelectorAll('.editable-field');
-            const editableCells = document.querySelectorAll('.editable-cell');
-            
-            if (isEditMode) {
-                editBtn.textContent = '👁️ View Mode';
-                editBtn.classList.add('editing');
-                saveBtn.style.display = hasUnsavedChanges ? 'inline-block' : 'none';
-                
-                // Enable editing
-                editableFields.forEach(field => {
-                    field.classList.add('editing');
-                    field.disabled = false;
-                });
-                
-                editableCells.forEach(cell => {
-                    cell.classList.add('editing');
-                    const input = cell.querySelector('input');
-                    if (input) input.disabled = false;
-                });
-            } else {
-                editBtn.textContent = '✏️ Edit Data';
-                editBtn.classList.remove('editing');
-                saveBtn.style.display = 'none';
-                
-                // Disable editing
-                editableFields.forEach(field => {
-                    field.classList.remove('editing');
-                    field.disabled = true;
-                });
-                
-                editableCells.forEach(cell => {
-                    cell.classList.remove('editing');
-                    const input = cell.querySelector('input');
-                    if (input) input.disabled = true;
-                });
-            }
-            
-            // Show/hide changes indicator
-            changesIndicator.style.display = hasUnsavedChanges ? 'inline' : 'none';
-        }
-        
-        // Mark as changed
-        function markAsChanged() {
-            hasUnsavedChanges = true;
-            updateEditModeUI();
-        }
-        
-        // Update product field
-        function updateProductField(productIndex, field, value) {
-            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
-                const order = pdfFiles[currentFileIndex].order;
-                if (productIndex >= 0 && productIndex < order.products.length) {
-                    if (field === 'quantity') {
-                        const newQuantity = parseFloat(value) || 0;
-                        order.products[productIndex].quantity = newQuantity;
-                        // Recalculate net price
-                        order.products[productIndex].netPrice = newQuantity * order.products[productIndex].unitPrice;
-                        
-                        // Update the net price display immediately
-                        const row = document.querySelector(`#productsTableBody tr:nth-child(${productIndex + 1})`);
-                        if (row) {
-                            const netCell = row.querySelector('td:last-child');
-                            if (netCell) {
-                                netCell.textContent = `£${order.products[productIndex].netPrice.toFixed(2)}`;
-                            }
-                        }
-                        
-                        // Recalculate order total
-                        order.total = order.products.reduce((sum, product) => sum + product.netPrice, 0);
-                        document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
-                        
-                    } else if (field === 'productCode') {
-                        order.products[productIndex].productCode = value.toUpperCase();
-                    }
-                    
-                    // Update processed orders array
-                    const processedOrderIndex = processedOrders.findIndex(o => o.filename === order.filename);
-                    if (processedOrderIndex >= 0) {
-                        processedOrders[processedOrderIndex] = order;
-                    }
-                    
-                    markAsChanged();
-                }
-            }
-        }
-        
-        // Save changes
-        function saveChanges() {
-            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
-                const order = pdfFiles[currentFileIndex].order;
-                
-                // Update order data from form fields
-                order.poNumber = document.getElementById('orderPO').value;
-                order.orderDate = convertDateFromInput(document.getElementById('orderDate').value);
-                order.deliveryDate = convertDateFromInput(document.getElementById('deliveryDate').value);
-                
-                // Update processed orders array
-                const processedOrderIndex = processedOrders.findIndex(o => o.filename === order.filename);
-                if (processedOrderIndex >= 0) {
-                    processedOrders[processedOrderIndex] = order;
-                }
-                
-                // Update display with new data
-                updateExtractedDataDisplay(order);
-                
-                hasUnsavedChanges = false;
-                updateEditModeUI();
-                
-                alert('✅ Changes saved successfully!');
-                
-                // Update summary stats
-                displayResults();
-            }
-        }
-        
-        // Real PDF processing with PDF.js
-        async function processPDF(file) {
+
+        async function deleteCustomerEmail(customerCode) {
             try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                const page = await pdf.getPage(1);
-                const textContent = await page.getTextContent();
-                
-                // Extract text from PDF
-                const text = textContent.items.map(item => item.str).join(' ');
-                
-                // Determine template type and parse
-                const isConsolidated = text.includes('Consolidated Purchase Order');
-                
-                if (isConsolidated) {
-                    return parseConsolidatedOrder(text, file.name);
-                } else {
-                    return parseStandardOrder(text, file.name);
-                }
+                await db.collection('customerEmails').doc(customerCode).delete();
+                emailMappingsCache.delete(customerCode);
+                console.log(`Deleted email mapping: ${customerCode}`);
+                updateMappingCount();
+                return true;
             } catch (error) {
-                console.error('Error processing PDF:', error);
+                console.error('Error deleting customer email:', error);
+                alert('Error deleting customer email: ' + error.message);
+                return false;
+            }
+        }
+
+        async function batchUploadCustomerEmails(csvText) {
+            try {
+                const lines = csvText.trim().split('\n');
+                const batch = db.batch();
+                let count = 0;
+                
+                for (const line of lines) {
+                    const [customerCode, customerName, email] = line.split(',').map(s => s.trim());
+                    
+                    if (customerCode && email) {
+                        const docRef = db.collection('customerEmails').doc(customerCode);
+                        batch.set(docRef, {
+                            customerCode,
+                            customerName: customerName || customerCode,
+                            email,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        count++;
+                    }
+                }
+                
+                await batch.commit();
+                console.log(`Batch uploaded ${count} customer email mappings`);
+                
+                await loadCustomerEmailsFromFirestore();
+                return count;
+            } catch (error) {
+                console.error('Error batch uploading:', error);
                 throw error;
             }
         }
-        
-        // Parse consolidated order template
-        function parseConsolidatedOrder(text, filename) {
-            const order = {
-                filename: filename,
-                type: 'Consolidated',
-                customerCode: '',
-                customerName: '',
-                poNumber: '',
-                orderDate: '',
-                deliveryDate: '',
-                products: [],
-                total: 0
-            };
+
+        // UI Functions
+        async function addSingleCustomerEmail() {
+            const code = document.getElementById('customerCode').value.trim();
+            const name = document.getElementById('customerName').value.trim();
+            const email = document.getElementById('customerEmail').value.trim();
             
-            // Extract PO Number
-            const poPatterns = [
-                /PO Number:\s*([A-Z0-9]+)/i,
-                /Purchase Order[^:]*:\s*([A-Z0-9]+)/i,
-                /PO[:\s]+([A-Z0-9]+)/i
-            ];
-            
-            for (const pattern of poPatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.poNumber = match[1];
-                    break;
-                }
+            if (!code || !email) {
+                alert('Customer Code and Email are required');
+                return;
             }
             
-            // Extract dates
-            const orderDatePatterns = [
-                /Order Date:\s*(\d{2}\/\d{2}\/\d{4})/,
-                /Date:\s*(\d{2}\/\d{2}\/\d{4})/
-            ];
+            const success = await addCustomerEmail(code, name, email);
+            if (success) {
+                alert('Customer email added successfully!');
+                document.getElementById('customerCode').value = '';
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+                
+                // Auto-refresh display
+                displayCurrentMappings();
+            }
+        }
+
+        async function batchUploadEmails() {
+            const csvText = document.getElementById('csvEmails').value.trim();
             
-            for (const pattern of orderDatePatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.orderDate = match[1];
-                    break;
-                }
+            if (!csvText) {
+                alert('Please enter CSV data');
+                return;
             }
             
-            const deliveryDatePatterns = [
-                /Delivery Date:\s*(\d{2}\/\d{2}\/\d{4})/,
-                /Deliver[^:]*:\s*(\d{2}\/\d{2}\/\d{4})/
-            ];
+            try {
+                const count = await batchUploadCustomerEmails(csvText);
+                alert(`Successfully uploaded ${count} customer email mappings!`);
+                document.getElementById('csvEmails').value = '';
+                
+                // Auto-refresh display
+                displayCurrentMappings();
+            } catch (error) {
+                alert('Error uploading emails: ' + error.message);
+            }
+        }
+
+        function updateMappingCount() {
+            const countElement = document.getElementById('mappingCount');
+            if (countElement) {
+                // Count only original codes (not uppercase duplicates)
+                const uniqueCodes = new Set();
+                emailMappingsCache.forEach((data, code) => {
+                    uniqueCodes.add(data.code); // Use the original code from data
+                });
+                countElement.textContent = uniqueCodes.size;
+            }
+        }
+
+        async function loadAndDisplayMappings() {
+            await loadCustomerEmailsFromFirestore();
+            displayCurrentMappings();
+        }
+
+        function displayCurrentMappings() {
+            const displayDiv = document.getElementById('mappingsDisplay');
             
-            for (const pattern of deliveryDatePatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.deliveryDate = match[1];
-                    break;
+            // Get unique customer codes (avoid showing duplicates from case-insensitive storage)
+            const uniqueMappings = new Map();
+            emailMappingsCache.forEach((data, code) => {
+                if (!uniqueMappings.has(data.code)) {
+                    uniqueMappings.set(data.code, data);
                 }
+            });
+            
+            if (uniqueMappings.size === 0) {
+                displayDiv.innerHTML = `
+                    <div style="text-align: center; color: #7f8c8d; padding: 40px;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">📭</div>
+                        <h4 style="color: #2c3e50; margin-bottom: 10px;">No Email Mappings Found</h4>
+                        <p>Add customer email mappings using the forms above.</p>
+                    </div>
+                `;
+            } else {
+                let html = `
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                        <strong style="color: #27ae60; font-size: 1.1rem;">
+                            📊 ${uniqueMappings.size} Customer Email Mappings Loaded
+                        </strong>
+                    </div>
+                `;
+                
+                // Sort mappings by customer code for better organization
+                const sortedMappings = Array.from(uniqueMappings.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                
+                sortedMappings.forEach(([customerCode, data]) => {
+                    html += `
+                        <div class="mapping-item">
+                            <div style="flex: 1;">
+                                <div class="mapping-code">${customerCode}</div>
+                                <div class="mapping-email">${data.name} → ${data.email}</div>
+                                <div style="font-size: 0.8rem; color: #95a5a6; margin-top: 5px;">
+                                    Added: ${data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : 'Unknown'}
+                                </div>
+                            </div>
+                            <button class="delete-btn" onclick="deleteMapping('${customerCode}')">Delete</button>
+                        </div>
+                    `;
+                });
+                displayDiv.innerHTML = html;
             }
             
-            // Extract customer info
-            const customerPatterns = [
-                /following outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
-                /outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
-                /The\s+([^(]+)\s*\(([^)]+)\)/i
-            ];
-            
-            for (const pattern of customerPatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.customerName = match[1].trim();
-                    order.customerCode = match[2].trim();
-                    break;
+            displayDiv.style.display = 'block';
+        }
+
+        async function deleteMapping(customerCode) {
+            if (confirm(`Are you sure you want to delete the mapping for ${customerCode}?`)) {
+                const success = await deleteCustomerEmail(customerCode);
+                if (success) {
+                    displayCurrentMappings(); // Refresh display
                 }
             }
-            
-            // Extract products
-            const productPatterns = [
-                /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x[A-Za-z]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g,
-                /(\d+\.?\d*)\s+([A-Z][A-Z\s]+?)\s+([A-Z]{2,5})\s+([^\d]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g
-            ];
-            
-            for (const pattern of productPatterns) {
-                let match;
-                while ((match = pattern.exec(text)) !== null) {
-                    const product = {
-                        quantity: parseFloat(match[1]),
-                        description: match[2].trim(),
-                        productCode: match[3].trim(),
-                        caseSize: match[4].trim(),
-                        unitPrice: parseFloat(match[5]),
-                        netPrice: parseFloat(match[6])
-                    };
-                    
-                    if (product.quantity > 0 && product.productCode && product.unitPrice > 0) {
-                        order.products.push(product);
-                        order.total += product.netPrice;
+        }
+
+        async function confirmClearAllMappings() {
+            if (confirm('Are you sure you want to delete ALL customer email mappings? This cannot be undone!')) {
+                if (confirm('This will permanently delete all email mappings. Type "DELETE ALL" to confirm.')) {
+                    // For extra safety, require user to type confirmation
+                    const confirmation = prompt('Type "DELETE ALL" to confirm:');
+                    if (confirmation === 'DELETE ALL') {
+                        await clearAllMappings();
                     }
                 }
+            }
+        }
+
+        async function clearAllMappings() {
+            try {
+                const batch = db.batch();
+                const snapshot = await db.collection('customerEmails').get();
                 
-                if (order.products.length > 0) break;
-            }
-            
-            // Extract total if products parsing failed
-            if (order.total === 0) {
-                const totalPatterns = [
-                    /Net Total[:\s]+(\d+\.?\d*)/i,
-                    /Total[:\s]+(\d+\.?\d*)/i
-                ];
-                
-                for (const pattern of totalPatterns) {
-                    const match = text.match(pattern);
-                    if (match) {
-                        order.total = parseFloat(match[1]);
-                        break;
-                    }
-                }
-            }
-            
-            return order;
-        }
-        
-        // Parse standard order template  
-        function parseStandardOrder(text, filename) {
-            const order = {
-                filename: filename,
-                type: 'Standard',
-                customerCode: '',
-                customerName: '',
-                poNumber: '',
-                orderDate: '',
-                deliveryDate: '',
-                products: [],
-                total: 0
-            };
-            
-            // Extract PO Number
-            const poMatch = text.match(/PO Number:\s*([A-Z0-9]+)/);
-            if (poMatch) order.poNumber = poMatch[1];
-            
-            // Extract dates
-            const orderDateMatch = text.match(/Order Date:\s*(\d{2}\/\d{2}\/\d{4})/);
-            if (orderDateMatch) order.orderDate = orderDateMatch[1];
-            
-            const deliveryDateMatch = text.match(/Delivery Date:\s*(\d{2}\/\d{2}\/\d{4})/);
-            if (deliveryDateMatch) order.deliveryDate = deliveryDateMatch[1];
-            
-            // Extract customer code from Account No
-            const accountMatch = text.match(/Account No:\s*([A-Z0-9]+)/);
-            if (accountMatch) order.customerCode = accountMatch[1];
-            
-            // Extract customer name from Deliver To section
-            const deliverMatch = text.match(/Deliver To\s+([^\n]+)/);
-            if (deliverMatch) order.customerName = deliverMatch[1].trim();
-            
-            // Extract products table
-            const tablePattern = /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x\w+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g;
-            let match;
-            
-            while ((match = tablePattern.exec(text)) !== null) {
-                const product = {
-                    quantity: parseFloat(match[1]),
-                    description: match[2].trim(),
-                    productCode: match[3].trim(),
-                    caseSize: match[4].trim(),
-                    unitPrice: parseFloat(match[5]),
-                    netPrice: parseFloat(match[6])
-                };
-                order.products.push(product);
-                order.total += product.netPrice;
-            }
-            
-            return order;
-        }
-        
-        // Update progress bar
-        function updateProgress(percent, status) {
-            document.getElementById('progressFill').style.width = percent + '%';
-            document.getElementById('processingStatus').textContent = status;
-        }
-        
-        // Display processing results
-        function displayResults() {
-            const resultsSection = document.getElementById('resultsSection');
-            
-            // Update stats
-            const totalProducts = processedOrders.reduce((sum, order) => sum + order.products.length, 0);
-            const totalValue = processedOrders.reduce((sum, order) => sum + order.total, 0);
-            
-            document.getElementById('totalOrders').textContent = processedOrders.length;
-            document.getElementById('totalProducts').textContent = totalProducts;
-            document.getElementById('mappedProducts').textContent = totalProducts;
-            document.getElementById('totalValue').textContent = '£' + totalValue.toFixed(2);
-            
-            resultsSection.style.display = 'block';
-        }
-        
-        // Export to Excel in Freshware format with email lookup
-        async function exportToExcel() {
-            // First, validate that all customers have email mappings
-            const missingEmails = [];
-            
-            for (const order of processedOrders) {
-                const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
-                if (!customerEmail || customerEmail.trim() === '') {
-                    missingEmails.push({
-                        customerCode: order.customerCode,
-                        customerName: order.customerName,
-                        filename: order.filename
-                    });
-                }
-            }
-            
-            // If any emails are missing, show alert and stop export
-            if (missingEmails.length > 0) {
-                let alertMessage = '❌ Cannot export! Missing customer email mappings:\n\n';
-                
-                missingEmails.forEach(missing => {
-                    alertMessage += `• ${missing.customerCode} (${missing.customerName}) - from ${missing.filename}\n`;
+                snapshot.forEach(doc => {
+                    batch.delete(doc.ref);
                 });
                 
-                alertMessage += '\n🔧 Please add these email mappings first:\n';
-                alertMessage += '1. Click "Manage Emails →" in the top right\n';
-                alertMessage += '2. Add the missing customer emails\n';
-                alertMessage += '3. Return here and export again\n\n';
-                alertMessage += 'Export cancelled - no file was created.';
+                await batch.commit();
+                emailMappingsCache.clear();
+                updateMappingCount();
+                displayCurrentMappings();
                 
-                alert(alertMessage);
-                return; // Stop the export process
+                alert('All email mappings have been deleted.');
+            } catch (error) {
+                console.error('Error clearing mappings:', error);
+                alert('Error clearing mappings: ' + error.message);
+            }
+        }
+
+        function exportMappingsToCSV() {
+            if (emailMappingsCache.size === 0) {
+                alert('No mappings to export');
+                return;
             }
             
-            const wb = XLSX.utils.book_new();
-            const wsData = [];
+            let csvContent = 'CustomerCode,CustomerName,Email\n';
+            emailMappingsCache.forEach((data, customerCode) => {
+                csvContent += `${customerCode},${data.name},${data.email}\n`;
+            });
             
-            // Add header row
-            const headers = [
-                "Name", "Email", "Financial Status", "Paid at", "Fulfillment Status", "Fulfilled at",
-                "Accepts Marketing", "Currency", "Subtotal", "Shipping", "Taxes", "Total", 
-                "Discount Code", "Discount Amount", "Shipping Method", "Created at", 
-                "Lineitem quantity", "Lineitem name", "Lineitem price", "Lineitem compare at price",
-                "Lineitem sku", "Lineitem requires shipping", "Lineitem taxable", "Lineitem fulfillment status",
-                "Billing Name", "Billing Street", "Billing Address1", "Billing Address2", "Billing Company",
-                "Billing City", "Billing Zip", "Billing Province", "Billing Country", "Billing Phone",
-                "Shipping Name", "Shipping Street", "Shipping Address1", "Shipping Address2", "Shipping Company",
-                "Shipping City", "Shipping Zip", "Shipping Province", "Shipping Country", "Shipping Phone",
-                "Notes", "Note Attributes", "Cancelled at", "Payment Method", "Payment Reference",
-                "Refunded Amount", "Vendor", "Outstanding Balance", "Employee", "Location", "Device ID",
-                "Id", "Tags", "Risk Level", "Source", "Lineitem discount", "Tax 1 Name", "Tax 1 Value",
-                "Tax 2 Name", "Tax 2 Value", "Tax 3 Name", "Tax 3 Value", "Tax 4 Name", "Tax 4 Value",
-                "Tax 5 Name", "Tax 5 Value", "Phone", "Receipt Number", "Duties", "Billing Province Name",
-                "Shipping Province Name", "Payment ID", "Payment Terms Name", "Next Payment Due At", "Payment References"
-            ];
-            wsData.push(headers);
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customer_email_mappings_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function downloadMappingsBackup() {
+            if (emailMappingsCache.size === 0) {
+                alert('No mappings to backup');
+                return;
+            }
             
-            // Add data rows with email lookup
-            for (const order of processedOrders) {
-                // Get customer email from Firebase
-                const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
+            const backup = {
+                exportDate: new Date().toISOString(),
+                totalMappings: emailMappingsCache.size,
+                mappings: Array.from(emailMappingsCache.entries()).map(([code, data]) => ({
+                    customerCode: code,
+                    customerName: data.name,
+                    email: data.email,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customer_mappings_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Customer Email Management page loaded');
+            
+            // Password protection
+            // 🔧 TO CHANGE PASSWORD: Update the line below with your desired password
+            const correctPassword = 'hoc2025'; // Change this to your desired password
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (attempts < maxAttempts) {
+                const enteredPassword = prompt(`🔐 Enter password to access Customer Email Management:\n\nAttempt ${attempts + 1} of ${maxAttempts}`);
                 
-                for (let productIndex = 0; productIndex < order.products.length; productIndex++) {
-                    const product = order.products[productIndex];
-                    const row = new Array(79).fill("");
-                    
-                    // Column A (Name) = Purchase Order Number from PDF (NOT generated ID)
-                    row[0] = order.poNumber || `PO-${order.customerCode}-${order.orderDate}`; // Name - PO Number
-                    row[1] = customerEmail; // Email - FROM FIREBASE!
-                    
-                    // Order-level data ONLY on first line item
-                    if (productIndex === 0) {
-                        row[2] = "pending"; // Financial Status
-                        row[4] = "fulfilled"; // Fulfillment Status
-                        row[5] = `${order.deliveryDate.split('/').reverse().join('-')} 21:21:42 +0100`; // Fulfilled at
-                        row[6] = "yes"; // Accepts Marketing
-                        row[7] = "GBP"; // Currency
-                        row[8] = order.total; // Subtotal
-                        row[9] = 0; // Shipping
-                        row[10] = 0; // Taxes
-                        row[11] = order.total; // Total
-                        row[14] = "FREE DELIVERY"; // Shipping Method
-                        row[47] = "custom"; // Payment Method
-                        row[49] = "0"; // Refunded Amount
-                        row[51] = order.total; // Outstanding Balance
-                        
-                        // Billing/Shipping info - first row only
-                        const customerName = customerMappings.get(order.customerCode) || order.customerName;
-                        row[24] = `${customerName} (${order.customerCode})`; // Billing Name
-                        row[25] = "Address Line 1"; // Billing Street
-                        row[26] = "Address Line 1"; // Billing Address1
-                        row[29] = "London"; // Billing City
-                        row[30] = "SW1A 0AA"; // Billing Zip
-                        row[31] = "ENG"; // Billing Province
-                        row[32] = "GB"; // Billing Country
-                        
-                        // Shipping same as billing
-                        row[34] = row[24]; // Shipping Name
-                        row[35] = row[25]; // Shipping Street
-                        row[36] = row[26]; // Shipping Address1
-                        row[39] = row[29]; // Shipping City
-                        row[40] = row[30]; // Shipping Zip
-                        row[41] = "ENG"; // Shipping Province
-                        row[42] = "GB"; // Shipping Country
-                    } else {
-                        // Leave order-level fields BLANK for additional line items
-                        row[44] = ""; // Notes - empty for additional line items
-                    }
-                    
-                    // Line item data - appears on ALL rows
-                    row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at
-                    row[16] = product.quantity; // Lineitem quantity
-                    row[17] = product.description; // Lineitem name
-                    row[18] = product.unitPrice; // Lineitem price
-                    row[20] = product.productCode; // Lineitem sku
-                    row[21] = "TRUE"; // Lineitem requires shipping
-                    row[22] = "FALSE"; // Lineitem taxable
-                    row[23] = "fulfilled"; // Lineitem fulfillment status
-                    
-                    // Column AT (index 45) = Note Attributes with delivery date format on ALL rows
-                    row[45] = `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Note Attributes
-                    row[50] = getVendorForProduct(product.productCode); // Vendor (based on product type)
-                    row[53] = "Unit 2 Horner House"; // Location
-                    row[55] = `1.207${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}E+13`; // Id
-                    row[56] = "checkout-by-draft"; // Tags
-                    row[57] = "Low"; // Risk Level
-                    row[58] = "shopify_draft_order"; // Source
-                    
-                    // Tax columns and remaining fields - all empty except province names
-                    row[73] = "England"; // Billing Province Name
-                    row[74] = "England"; // Shipping Province Name
-                    
-                    wsData.push(row);
+                if (enteredPassword === null) {
+                    // User clicked cancel
+                    alert('Access denied. Redirecting to main page...');
+                    window.location.href = '/';
+                    return;
+                }
+                
+                if (enteredPassword === correctPassword) {
+                    alert('✅ Access granted! Welcome to Customer Email Management.');
+                    break;
+                }
+                
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    alert('❌ Too many incorrect attempts. Redirecting to main page...');
+                    window.location.href = '/';
+                    return;
+                } else {
+                    alert(`❌ Incorrect password. ${maxAttempts - attempts} attempts remaining.`);
                 }
             }
             
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            XLSX.utils.book_append_sheet(wb, ws, "Orders");
-            
-            // Generate filename with current date
-            const today = new Date().toISOString().split('T')[0];
-            const filename = `freshware_orders_${today}.xlsx`;
-            
-            XLSX.writeFile(wb, filename);
-            
-            // Show success message
-            alert(`✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}\n\nReady for Freshware import!`);
-        }
-        
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', init);
+            // Load and display existing mappings automatically
+            await loadCustomerEmailsFromFirestore();
+            displayCurrentMappings();
+        });
     </script>
 </body>
 </html>
