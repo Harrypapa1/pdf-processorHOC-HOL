@@ -605,7 +605,7 @@
                                 </div>
                                 <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
                                     💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes<br>
-                                    📦 SKU suffixes: Case contains "kg" → +KG, "box" → +B, otherwise → +E
+                                    📦 SKU suffixes: Case contains "kg" → +K, "box" → +B, otherwise → +E
                                 </div>
                             </div>
                             <div>
@@ -737,7 +737,7 @@
             const caseLower = caseSize.toLowerCase();
             
             if (caseLower.includes('kg') || caseLower.includes('kilo')) {
-                return 'KG';
+                return 'K';
             } else if (caseLower.includes('box') || caseLower.includes('bx')) {
                 return 'B';
             } else {
