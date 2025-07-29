@@ -23,7 +23,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -185,6 +185,147 @@
             transition: width 0.3s ease;
         }
         
+        /* New Two-Column Layout */
+        .pdf-viewer-section {
+            display: none;
+            margin: 30px 0;
+        }
+        
+        .viewer-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .pdf-viewer {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .pdf-viewer-header {
+            background: #f8fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e3e8ef;
+            text-align: center;
+        }
+        
+        .pdf-viewer-header h3 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .pdf-canvas-container {
+            padding: 20px;
+            text-align: center;
+            background: #f8fafc;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pdf-canvas {
+            max-width: 100%;
+            max-height: 600px;
+            border: 1px solid #e3e8ef;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .pdf-controls {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e3e8ef;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .pdf-control-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .pdf-control-btn:hover {
+            background: #5a67d8;
+        }
+        
+        .pdf-control-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        
+        .page-info {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .extracted-data {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .extracted-data-header {
+            background: #f8fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e3e8ef;
+        }
+        
+        .extracted-data-header h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .order-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .extracted-data-body {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+        
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        
+        .products-table th,
+        .products-table td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e3e8ef;
+            font-size: 0.85rem;
+        }
+        
+        .products-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #2c3e50;
+            position: sticky;
+            top: 0;
+        }
+        
         .results-section {
             display: none;
             margin: 30px 0;
@@ -217,57 +358,6 @@
             font-size: 0.9rem;
         }
         
-        .order-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin: 20px 0;
-            overflow: hidden;
-            border-left: 5px solid #667eea;
-        }
-        
-        .order-header {
-            background: #f8fafc;
-            padding: 20px 30px;
-            border-bottom: 1px solid #e3e8ef;
-        }
-        
-        .order-header h3 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        
-        .order-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            font-size: 0.9rem;
-            color: #7f8c8d;
-        }
-        
-        .order-body {
-            padding: 30px;
-        }
-        
-        .products-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        .products-table th,
-        .products-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e3e8ef;
-        }
-        
-        .products-table th {
-            background: #f8fafc;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
         .export-section {
             background: #e8f5e8;
             border-radius: 15px;
@@ -284,7 +374,43 @@
             box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
         }
         
+        .multi-file-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .file-tab {
+            background: #e3e8ef;
+            color: #2c3e50;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .file-tab:hover {
+            transform: translateY(-2px);
+        }
+        
         @media (max-width: 768px) {
+            .viewer-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
             .nav-link {
                 position: static;
                 transform: none;
@@ -294,6 +420,10 @@
             
             .header {
                 text-align: left;
+            }
+            
+            .order-summary {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -336,6 +466,68 @@
                 <p id="processingStatus">Initializing...</p>
             </div>
             
+            <!-- PDF Viewer Section -->
+            <div class="pdf-viewer-section" id="pdfViewerSection">
+                <div class="multi-file-tabs" id="fileTabsContainer"></div>
+                
+                <div class="viewer-container">
+                    <!-- PDF Viewer -->
+                    <div class="pdf-viewer">
+                        <div class="pdf-viewer-header">
+                            <h3 id="currentFileName">PDF Document</h3>
+                            <p style="color: #7f8c8d; font-size: 0.9rem;">Original order document</p>
+                        </div>
+                        <div class="pdf-canvas-container">
+                            <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+                        </div>
+                        <div class="pdf-controls">
+                            <button class="pdf-control-btn" id="prevPageBtn">← Previous</button>
+                            <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                            <button class="pdf-control-btn" id="nextPageBtn">Next →</button>
+                            <button class="pdf-control-btn" onclick="zoomOut()">Zoom -</button>
+                            <button class="pdf-control-btn" onclick="zoomIn()">Zoom +</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Extracted Data -->
+                    <div class="extracted-data">
+                        <div class="extracted-data-header">
+                            <h3>📊 Extracted Order Data</h3>
+                            <div class="order-summary" id="orderSummary">
+                                <div><strong>Type:</strong> <span id="orderType">-</span></div>
+                                <div><strong>PO Number:</strong> <span id="orderPO">-</span></div>
+                                <div><strong>Customer:</strong> <span id="orderCustomer">-</span></div>
+                                <div><strong>Order Date:</strong> <span id="orderDate">-</span></div>
+                                <div><strong>Delivery Date:</strong> <span id="deliveryDate">-</span></div>
+                                <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
+                            </div>
+                        </div>
+                        <div class="extracted-data-body">
+                            <table class="products-table" id="productsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Qty</th>
+                                        <th>Description</th>
+                                        <th>SKU</th>
+                                        <th>Case</th>
+                                        <th>Unit £</th>
+                                        <th>Net £</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                            Upload a PDF to see extracted product data
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Summary Section -->
             <div class="results-section" id="resultsSection">
                 <div class="stats-grid" id="statsGrid">
                     <div class="stat-card">
@@ -355,8 +547,6 @@
                         <div class="stat-label">Total Value</div>
                     </div>
                 </div>
-                
-                <div id="ordersContainer"></div>
                 
                 <!-- Export Section -->
                 <div class="export-section">
@@ -391,6 +581,14 @@
         let emailMappingsCache = new Map();
         let lastCacheUpdate = 0;
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+        // PDF Viewer variables
+        let currentPDF = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentScale = 1.2;
+        let pdfFiles = [];
+        let currentFileIndex = 0;
 
         // Vendor mappings by product type
         let vendorMappings = new Map();
@@ -480,6 +678,7 @@
         async function init() {
             await initializeMappings();
             setupEventListeners();
+            setupPDFControls();
             console.log('App initialized successfully');
         }
         
@@ -529,6 +728,12 @@
             });
         }
         
+        // Setup PDF Controls
+        function setupPDFControls() {
+            document.getElementById('prevPageBtn').addEventListener('click', prevPage);
+            document.getElementById('nextPageBtn').addEventListener('click', nextPage);
+        }
+        
         // Handle file selection
         function handleFiles(event) {
             const files = Array.from(event.target.files);
@@ -540,9 +745,11 @@
         // Process PDF files
         async function processFiles(files) {
             document.getElementById('processingSection').style.display = 'block';
+            document.getElementById('pdfViewerSection').style.display = 'none';
             document.getElementById('resultsSection').style.display = 'none';
             
             processedOrders = [];
+            pdfFiles = [];
             
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -552,6 +759,11 @@
                     const order = await processPDF(file);
                     if (order) {
                         processedOrders.push(order);
+                        pdfFiles.push({
+                            file: file,
+                            order: order,
+                            pdf: null // Will be loaded when viewed
+                        });
                     }
                 } catch (error) {
                     console.error(`Error processing ${file.name}:`, error);
@@ -562,8 +774,164 @@
             updateProgress(100, 'Processing complete!');
             setTimeout(() => {
                 document.getElementById('processingSection').style.display = 'none';
+                displayPDFViewer();
                 displayResults();
             }, 1000);
+        }
+        
+        // Display PDF Viewer
+        async function displayPDFViewer() {
+            if (pdfFiles.length === 0) return;
+            
+            document.getElementById('pdfViewerSection').style.display = 'block';
+            
+            // Create file tabs
+            const tabsContainer = document.getElementById('fileTabsContainer');
+            tabsContainer.innerHTML = '';
+            
+            pdfFiles.forEach((pdfFile, index) => {
+                const tab = document.createElement('button');
+                tab.className = `file-tab ${index === 0 ? 'active' : ''}`;
+                tab.textContent = pdfFile.file.name;
+                tab.onclick = () => switchToFile(index);
+                tabsContainer.appendChild(tab);
+            });
+            
+            // Load first PDF
+            currentFileIndex = 0;
+            await loadPDFForViewing(0);
+        }
+        
+        // Switch to different file
+        async function switchToFile(index) {
+            // Update active tab
+            document.querySelectorAll('.file-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            currentFileIndex = index;
+            await loadPDFForViewing(index);
+        }
+        
+        // Load PDF for viewing
+        async function loadPDFForViewing(index) {
+            const pdfFile = pdfFiles[index];
+            
+            try {
+                if (!pdfFile.pdf) {
+                    const arrayBuffer = await pdfFile.file.arrayBuffer();
+                    pdfFile.pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                }
+                
+                currentPDF = pdfFile.pdf;
+                totalPages = currentPDF.numPages;
+                currentPage = 1;
+                
+                // Update filename display
+                document.getElementById('currentFileName').textContent = pdfFile.file.name;
+                
+                // Render first page
+                await renderPage(1);
+                
+                // Update extracted data display
+                updateExtractedDataDisplay(pdfFile.order);
+                
+            } catch (error) {
+                console.error('Error loading PDF for viewing:', error);
+            }
+        }
+        
+        // Render PDF page
+        async function renderPage(pageNum) {
+            if (!currentPDF) return;
+            
+            try {
+                const page = await currentPDF.getPage(pageNum);
+                const canvas = document.getElementById('pdfCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                const viewport = page.getViewport({ scale: currentScale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                await page.render(renderContext).promise;
+                
+                // Update page info
+                document.getElementById('pageInfo').textContent = `Page ${pageNum} of ${totalPages}`;
+                
+                // Update button states
+                document.getElementById('prevPageBtn').disabled = pageNum <= 1;
+                document.getElementById('nextPageBtn').disabled = pageNum >= totalPages;
+                
+            } catch (error) {
+                console.error('Error rendering page:', error);
+            }
+        }
+        
+        // PDF Navigation
+        function prevPage() {
+            if (currentPage <= 1) return;
+            currentPage--;
+            renderPage(currentPage);
+        }
+        
+        function nextPage() {
+            if (currentPage >= totalPages) return;
+            currentPage++;
+            renderPage(currentPage);
+        }
+        
+        function zoomIn() {
+            currentScale = Math.min(currentScale * 1.2, 3.0);
+            renderPage(currentPage);
+        }
+        
+        function zoomOut() {
+            currentScale = Math.max(currentScale / 1.2, 0.5);
+            renderPage(currentPage);
+        }
+        
+        // Update extracted data display
+        function updateExtractedDataDisplay(order) {
+            // Update order summary
+            document.getElementById('orderType').textContent = order.type;
+            document.getElementById('orderPO').textContent = order.poNumber;
+            document.getElementById('orderCustomer').textContent = `${order.customerName} (${order.customerCode})`;
+            document.getElementById('orderDate').textContent = order.orderDate;
+            document.getElementById('deliveryDate').textContent = order.deliveryDate;
+            document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
+            
+            // Update products table
+            const tbody = document.getElementById('productsTableBody');
+            tbody.innerHTML = '';
+            
+            if (order.products.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            No products found in this order
+                        </td>
+                    </tr>
+                `;
+            } else {
+                order.products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.quantity}</td>
+                        <td>${product.description}</td>
+                        <td><strong>${product.productCode}</strong></td>
+                        <td>${product.caseSize}</td>
+                        <td>£${product.unitPrice.toFixed(2)}</td>
+                        <td>£${product.netPrice.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
         }
         
         // Real PDF processing with PDF.js
@@ -771,7 +1139,6 @@
         // Display processing results
         function displayResults() {
             const resultsSection = document.getElementById('resultsSection');
-            const ordersContainer = document.getElementById('ordersContainer');
             
             // Update stats
             const totalProducts = processedOrders.reduce((sum, order) => sum + order.products.length, 0);
@@ -782,70 +1149,7 @@
             document.getElementById('mappedProducts').textContent = totalProducts;
             document.getElementById('totalValue').textContent = '£' + totalValue.toFixed(2);
             
-            // Clear previous results
-            ordersContainer.innerHTML = '';
-            
-            // Display each order
-            processedOrders.forEach((order, index) => {
-                const orderCard = createOrderCard(order, index);
-                ordersContainer.appendChild(orderCard);
-            });
-            
             resultsSection.style.display = 'block';
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Create order card HTML
-        function createOrderCard(order, index) {
-            const card = document.createElement('div');
-            card.className = 'order-card';
-            
-            const customerMapping = customerMappings.get(order.customerCode) || order.customerCode;
-            
-            card.innerHTML = `
-                <div class="order-header">
-                    <h3>Order ${index + 1}: ${order.filename}</h3>
-                    <div class="order-meta">
-                        <div><strong>Type:</strong> ${order.type}</div>
-                        <div><strong>PO Number:</strong> ${order.poNumber}</div>
-                        <div><strong>Customer:</strong> ${order.customerName} (${order.customerCode} → ${customerMapping})</div>
-                        <div><strong>Order Date:</strong> ${order.orderDate}</div>
-                        <div><strong>Delivery Date:</strong> ${order.deliveryDate}</div>
-                        <div><strong>Total:</strong> £${order.total.toFixed(2)}</div>
-                    </div>
-                </div>
-                <div class="order-body">
-                    <h4>Products (${order.products.length} items)</h4>
-                    <table class="products-table">
-                        <thead>
-                            <tr>
-                                <th>Qty</th>
-                                <th>Description</th>
-                                <th>SKU Code</th>
-                                <th>Case Size</th>
-                                <th>Unit Price</th>
-                                <th>Net</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${order.products.map(product => {
-                                return `
-                                    <tr>
-                                        <td>${product.quantity}</td>
-                                        <td>${product.description}</td>
-                                        <td><strong>${product.productCode}</strong></td>
-                                        <td>${product.caseSize}</td>
-                                        <td>£${product.unitPrice.toFixed(2)}</td>
-                                        <td>£${product.netPrice.toFixed(2)}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            return card;
         }
         
         // Export to Excel in Freshware format with email lookup
