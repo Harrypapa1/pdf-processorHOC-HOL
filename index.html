@@ -1591,9 +1591,13 @@
                         row[40] = row[30]; // Shipping Zip
                         row[41] = "ENG"; // Shipping Province
                         row[42] = "GB"; // Shipping Country
+                        
+                        // Column AT (index 45) = Note Attributes with delivery date ONLY on first row
+                        row[45] = `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Note Attributes
                     } else {
                         // Leave order-level fields BLANK for additional line items
                         row[44] = ""; // Notes - empty for additional line items
+                        row[45] = ""; // Note Attributes - BLANK on additional rows
                     }
                     
                     // Line item data - appears on ALL rows
@@ -1606,8 +1610,6 @@
                     row[22] = "FALSE"; // Lineitem taxable
                     row[23] = "fulfilled"; // Lineitem fulfillment status
                     
-                    // Column AT (index 45) = Note Attributes with delivery date format on ALL rows
-                    row[45] = `mw-delivery-date: ${order.deliveryDate.split('/').reverse().join('-')}`; // Note Attributes
                     row[50] = getVendorForProduct(product.productCode); // Vendor (based on product type)
                     row[53] = "Unit 2 Horner House"; // Location
                     row[55] = `1.207${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}E+13`; // Id
