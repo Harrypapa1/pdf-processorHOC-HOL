@@ -50,22 +50,28 @@
             font-size: 1.1rem;
         }
         
-        .nav-link {
+        .nav-links {
             position: absolute;
             right: 30px;
             top: 50%;
             transform: translateY(-50%);
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-link {
             color: white;
             text-decoration: none;
             background: rgba(255,255,255,0.2);
             padding: 10px 20px;
             border-radius: 25px;
             transition: all 0.3s ease;
+            font-size: 0.9rem;
         }
         
         .nav-link:hover {
             background: rgba(255,255,255,0.3);
-            transform: translateY(-50%) translateX(-5px);
+            transform: translateY(-2px);
         }
         
         .main-content {
@@ -505,6 +511,106 @@
         .file-tab:hover {
             transform: translateY(-2px);
         }
+
+        /* Recent Orders Section */
+        .recent-orders-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 40px 0 20px 0;
+            border-top: 3px solid #667eea;
+        }
+
+        .recent-orders-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .view-all-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: normal;
+            transition: all 0.3s ease;
+        }
+
+        .view-all-link:hover {
+            color: #5a67d8;
+            text-decoration: underline;
+        }
+
+        .recent-orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .recent-orders-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .recent-orders-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e3e8ef;
+            font-size: 0.85rem;
+        }
+
+        .recent-orders-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .recent-orders-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .recent-orders-table tr:nth-child(even):hover {
+            background: #f0f0f0;
+        }
+
+        .customer-code-cell {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .po-number-cell {
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+        }
+
+        .date-cell {
+            color: #7f8c8d;
+            font-size: 0.8rem;
+        }
+
+        .recent-orders-loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .recent-orders-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+
+        .recent-orders-empty .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
         
         @media (max-width: 768px) {
             .viewer-container {
@@ -512,19 +618,30 @@
                 gap: 20px;
             }
             
-            .nav-link {
+            .nav-links {
                 position: static;
                 transform: none;
-                display: inline-block;
+                display: flex;
+                justify-content: center;
                 margin-bottom: 15px;
+                flex-wrap: wrap;
             }
             
             .header {
-                text-align: left;
+                text-align: center;
             }
             
             .order-summary {
                 grid-template-columns: 1fr;
+            }
+
+            .recent-orders-table {
+                font-size: 0.8rem;
+            }
+
+            .recent-orders-table th,
+            .recent-orders-table td {
+                padding: 8px 10px;
             }
         }
     </style>
@@ -532,7 +649,10 @@
 <body>
     <div class="container">
         <div class="header">
-            <a href="/customer-email-management.html" class="nav-link">Manage Emails →</a>
+            <div class="nav-links">
+                <a href="/customer-email-management.html" class="nav-link">Manage Emails</a>
+                <a href="/order-history.html" class="nav-link">Order History</a>
+            </div>
             <h1>📧 Email Order Processing</h1>
             <p>Transform PDF orders into Excel files for Freshware</p>
         </div>
@@ -673,6 +793,41 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Recent Orders Section -->
+            <div class="recent-orders-section" id="recentOrdersSection">
+                <h3>
+                    📋 Recent Orders
+                    <a href="/order-history.html" class="view-all-link">View All History →</a>
+                </h3>
+                
+                <div id="recentOrdersLoading" class="recent-orders-loading">
+                    Loading recent orders...
+                </div>
+                
+                <div id="recentOrdersContent" style="display: none;">
+                    <table class="recent-orders-table" id="recentOrdersTable">
+                        <thead>
+                            <tr>
+                                <th>Exported</th>
+                                <th>Customer Code</th>
+                                <th>Customer Name</th>
+                                <th>PO Number</th>
+                                <th>Order Date</th>
+                                <th>Products</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentOrdersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="recentOrdersEmpty" class="recent-orders-empty" style="display: none;">
+                    <div class="empty-icon">📦</div>
+                    <p><strong>No orders exported yet</strong></p>
+                    <p>Once you export your first order, the last 10 will appear here</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -786,6 +941,146 @@
                    emailMappingsCache.get(customerName.toUpperCase()) ||
                    '';
         }
+
+        // Save order history to Firebase
+        async function saveOrderHistory(orders) {
+            try {
+                console.log('Saving order history to Firebase...');
+                
+                const batch = db.batch();
+                const now = new Date();
+                
+                for (const order of orders) {
+                    const historyData = {
+                        // Order identification
+                        customerCode: order.customerCode || '',
+                        customerName: order.customerName || '',
+                        purchaseOrderNumber: order.poNumber || '',
+                        
+                        // Dates
+                        orderDate: order.orderDate || '',
+                        deliveryDate: order.deliveryDate || '',
+                        exportedAt: now,
+                        
+                        // Order summary
+                        orderType: order.type || '',
+                        totalProducts: order.products.length,
+                        totalQuantity: order.products.reduce((sum, product) => sum + product.quantity, 0),
+                        totalValue: order.total,
+                        
+                        // File reference
+                        originalFileName: order.filename || '',
+                        
+                        // Products summary (for reference)
+                        productCodes: order.products.map(p => p.productCode).join(', ')
+                    };
+                    
+                    // Create document with auto-generated ID
+                    const docRef = db.collection('orderHistory').doc();
+                    batch.set(docRef, historyData);
+                }
+                
+                await batch.commit();
+                console.log(`Successfully saved ${orders.length} orders to history`);
+                
+                // Refresh recent orders display
+                loadRecentOrders();
+                
+            } catch (error) {
+                console.error('Error saving order history:', error);
+                // Don't block the export if history saving fails
+            }
+        }
+
+        // Load and display recent orders
+        async function loadRecentOrders() {
+            try {
+                const recentOrdersLoading = document.getElementById('recentOrdersLoading');
+                const recentOrdersContent = document.getElementById('recentOrdersContent');
+                const recentOrdersEmpty = document.getElementById('recentOrdersEmpty');
+                
+                recentOrdersLoading.style.display = 'block';
+                recentOrdersContent.style.display = 'none';
+                recentOrdersEmpty.style.display = 'none';
+                
+                const snapshot = await db.collection('orderHistory')
+                    .orderBy('exportedAt', 'desc')
+                    .limit(10)
+                    .get();
+                
+                const orders = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    orders.push({
+                        ...data,
+                        exportedAt: data.exportedAt.toDate()
+                    });
+                });
+                
+                recentOrdersLoading.style.display = 'none';
+                
+                if (orders.length === 0) {
+                    recentOrdersEmpty.style.display = 'block';
+                } else {
+                    displayRecentOrders(orders);
+                    recentOrdersContent.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Error loading recent orders:', error);
+                document.getElementById('recentOrdersLoading').innerHTML = 
+                    '<p style="color: #e74c3c;">Error loading recent orders</p>';
+            }
+        }
+
+        // Display recent orders in table
+        function displayRecentOrders(orders) {
+            const tableBody = document.getElementById('recentOrdersTableBody');
+            tableBody.innerHTML = '';
+            
+            orders.forEach(order => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td class="date-cell">${formatRecentOrderDate(order.exportedAt)}</td>
+                    <td class="customer-code-cell">${order.customerCode || 'N/A'}</td>
+                    <td>${truncateText(order.customerName || 'N/A', 20)}</td>
+                    <td class="po-number-cell">${order.purchaseOrderNumber || 'N/A'}</td>
+                    <td class="date-cell">${order.orderDate || 'N/A'}</td>
+                    <td style="text-align: center;">${order.totalProducts || 0}</td>
+                `;
+            });
+        }
+
+        // Format date for recent orders display
+        function formatRecentOrderDate(date) {
+            if (!date) return 'N/A';
+            
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffMins < 60) {
+                return diffMins <= 1 ? 'Just now' : `${diffMins}m ago`;
+            } else if (diffHours < 24) {
+                return `${diffHours}h ago`;
+            } else if (diffDays < 7) {
+                return `${diffDays}d ago`;
+            } else {
+                return date.toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                });
+            }
+        }
+
+        // Truncate text with ellipsis
+        function truncateText(text, maxLength) {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength - 3) + '...';
+        }
         
         // Initialize known mappings
         async function initializeMappings() {
@@ -820,6 +1115,10 @@
             await initializeMappings();
             setupEventListeners();
             setupPDFControls();
+            
+            // Load recent orders on page load
+            loadRecentOrders();
+            
             console.log('App initialized successfully');
         }
         
@@ -1512,7 +1811,7 @@
                 });
                 
                 alertMessage += '\n🔧 Please add these email mappings first:\n';
-                alertMessage += '1. Click "Manage Emails →" in the top right\n';
+                alertMessage += '1. Click "Manage Emails" in the top right\n';
                 alertMessage += '2. Add the missing customer emails\n';
                 alertMessage += '3. Return here and export again\n\n';
                 alertMessage += 'Export cancelled - no file was created.';
@@ -1633,6 +1932,9 @@
             const filename = `freshware_orders_${today}.xlsx`;
             
             XLSX.writeFile(wb, filename);
+            
+            // Save order history to Firebase AFTER successful export
+            await saveOrderHistory(processedOrders);
             
             // Show success message
             alert(`✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}\n\nReady for Freshware import!`);
