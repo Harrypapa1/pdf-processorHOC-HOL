@@ -287,6 +287,107 @@
         .extracted-data-header h3 {
             color: #2c3e50;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .edit-toggle-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .edit-toggle-btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+        
+        .edit-toggle-btn.editing {
+            background: #27ae60;
+        }
+        
+        .edit-toggle-btn.editing:hover {
+            background: #229954;
+        }
+        
+        .editable-field {
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .editable-field:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #f8fafc;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .editable-field.editing {
+            border-color: #e3e8ef;
+            background: white;
+        }
+        
+        .editable-cell {
+            position: relative;
+        }
+        
+        .editable-cell input {
+            border: 1px solid transparent;
+            background: transparent;
+            padding: 2px 5px;
+            border-radius: 3px;
+            width: 100%;
+            font-family: inherit;
+            font-size: inherit;
+        }
+        
+        .editable-cell input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #f8fafc;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .editable-cell.editing input {
+            border-color: #e3e8ef;
+            background: white;
+        }
+        
+        .save-changes-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .save-changes-btn:hover {
+            background: #229954;
+            transform: translateY(-1px);
+        }
+        
+        .changes-indicator {
+            color: #e67e22;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-left: 10px;
         }
         
         .order-summary {
@@ -492,23 +593,37 @@
                     <!-- Extracted Data -->
                     <div class="extracted-data">
                         <div class="extracted-data-header">
-                            <h3>📊 Extracted Order Data</h3>
-                            <div class="order-summary" id="orderSummary">
-                                <div><strong>Type:</strong> <span id="orderType">-</span></div>
-                                <div><strong>PO Number:</strong> <span id="orderPO">-</span></div>
-                                <div><strong>Customer:</strong> <span id="orderCustomer">-</span></div>
-                                <div><strong>Order Date:</strong> <span id="orderDate">-</span></div>
-                                <div><strong>Delivery Date:</strong> <span id="deliveryDate">-</span></div>
-                                <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
+                            <div>
+                                <h3>📊 Extracted Order Data</h3>
+                                <div class="order-summary" id="orderSummary">
+                                    <div><strong>Type:</strong> <span id="orderType">-</span></div>
+                                    <div><strong>PO Number:</strong> <input class="editable-field" id="orderPO" value="-" onchange="markAsChanged()" disabled></div>
+                                    <div><strong>Customer:</strong> <span id="orderCustomer">-</span></div>
+                                    <div><strong>Order Date:</strong> <input class="editable-field" id="orderDate" type="date" onchange="markAsChanged()" disabled></div>
+                                    <div><strong>Delivery Date:</strong> <input class="editable-field" id="deliveryDate" type="date" onchange="markAsChanged()" disabled></div>
+                                    <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
+                                    💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes
+                                </div>
+                            </div>
+                            <div>
+                                <button class="edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()">
+                                    ✏️ Edit Data
+                                </button>
+                                <button class="save-changes-btn" id="saveChangesBtn" onclick="saveChanges()" style="display: none;">
+                                    💾 Save Changes
+                                </button>
+                                <span class="changes-indicator" id="changesIndicator" style="display: none;">● Changes made</span>
                             </div>
                         </div>
                         <div class="extracted-data-body">
                             <table class="products-table" id="productsTable">
                                 <thead>
                                     <tr>
-                                        <th>Qty</th>
+                                        <th>Qty <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
                                         <th>Description</th>
-                                        <th>SKU</th>
+                                        <th>SKU <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
                                         <th>Case</th>
                                         <th>Unit £</th>
                                         <th>Net £</th>
@@ -589,6 +704,10 @@
         let currentScale = 1.2;
         let pdfFiles = [];
         let currentFileIndex = 0;
+
+        // Edit mode variables
+        let isEditMode = false;
+        let hasUnsavedChanges = false;
 
         // Vendor mappings by product type
         let vendorMappings = new Map();
@@ -810,6 +929,18 @@
         
         // Switch to different file
         async function switchToFile(index) {
+            // Check for unsaved changes
+            if (hasUnsavedChanges) {
+                const confirmSwitch = confirm('You have unsaved changes. Do you want to save them before switching files?\n\nClick OK to save, or Cancel to discard changes.');
+                if (confirmSwitch) {
+                    saveChanges();
+                } else {
+                    // Discard changes by reloading the current file
+                    hasUnsavedChanges = false;
+                    updateEditModeUI();
+                }
+            }
+            
             // Update active tab
             document.querySelectorAll('.file-tab').forEach((tab, i) => {
                 tab.classList.toggle('active', i === index);
@@ -841,6 +972,11 @@
                 
                 // Update extracted data display
                 updateExtractedDataDisplay(pdfFile.order);
+                
+                // Reset edit mode for new file
+                isEditMode = false;
+                hasUnsavedChanges = false;
+                updateEditModeUI();
                 
             } catch (error) {
                 console.error('Error loading PDF for viewing:', error);
@@ -906,10 +1042,12 @@
         function updateExtractedDataDisplay(order) {
             // Update order summary
             document.getElementById('orderType').textContent = order.type;
-            document.getElementById('orderPO').textContent = order.poNumber;
+            document.getElementById('orderPO').value = order.poNumber || '';
             document.getElementById('orderCustomer').textContent = `${order.customerName} (${order.customerCode})`;
-            document.getElementById('orderDate').textContent = order.orderDate;
-            document.getElementById('deliveryDate').textContent = order.deliveryDate;
+            
+            // Convert dates from DD/MM/YYYY to YYYY-MM-DD for date inputs
+            document.getElementById('orderDate').value = convertDateForInput(order.orderDate);
+            document.getElementById('deliveryDate').value = convertDateForInput(order.deliveryDate);
             document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
             
             // Update products table
@@ -925,18 +1063,176 @@
                     </tr>
                 `;
             } else {
-                order.products.forEach(product => {
+                order.products.forEach((product, index) => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${product.quantity}</td>
+                        <td class="editable-cell">
+                            <input type="number" step="0.1" value="${product.quantity}" 
+                                   onchange="updateProductField(${index}, 'quantity', this.value)" />
+                        </td>
                         <td>${product.description}</td>
-                        <td><strong>${product.productCode}</strong></td>
+                        <td class="editable-cell">
+                            <input type="text" value="${product.productCode}" 
+                                   onchange="updateProductField(${index}, 'productCode', this.value)" 
+                                   style="text-transform: uppercase;" />
+                        </td>
                         <td>${product.caseSize}</td>
                         <td>£${product.unitPrice.toFixed(2)}</td>
                         <td>£${product.netPrice.toFixed(2)}</td>
                     `;
                     tbody.appendChild(row);
                 });
+            }
+            
+            // Reset edit mode
+            isEditMode = false;
+            hasUnsavedChanges = false;
+            updateEditModeUI();
+        }
+        
+        // Convert date from DD/MM/YYYY to YYYY-MM-DD
+        function convertDateForInput(dateStr) {
+            if (!dateStr || dateStr === '') return '';
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            return dateStr;
+        }
+        
+        // Convert date from YYYY-MM-DD to DD/MM/YYYY
+        function convertDateFromInput(dateStr) {
+            if (!dateStr || dateStr === '') return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+        
+        // Toggle edit mode
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            updateEditModeUI();
+        }
+        
+        // Update UI based on edit mode
+        function updateEditModeUI() {
+            const editBtn = document.getElementById('editToggleBtn');
+            const saveBtn = document.getElementById('saveChangesBtn');
+            const changesIndicator = document.getElementById('changesIndicator');
+            const editableFields = document.querySelectorAll('.editable-field');
+            const editableCells = document.querySelectorAll('.editable-cell');
+            
+            if (isEditMode) {
+                editBtn.textContent = '👁️ View Mode';
+                editBtn.classList.add('editing');
+                saveBtn.style.display = hasUnsavedChanges ? 'inline-block' : 'none';
+                
+                // Enable editing
+                editableFields.forEach(field => {
+                    field.classList.add('editing');
+                    field.disabled = false;
+                });
+                
+                editableCells.forEach(cell => {
+                    cell.classList.add('editing');
+                    const input = cell.querySelector('input');
+                    if (input) input.disabled = false;
+                });
+            } else {
+                editBtn.textContent = '✏️ Edit Data';
+                editBtn.classList.remove('editing');
+                saveBtn.style.display = 'none';
+                
+                // Disable editing
+                editableFields.forEach(field => {
+                    field.classList.remove('editing');
+                    field.disabled = true;
+                });
+                
+                editableCells.forEach(cell => {
+                    cell.classList.remove('editing');
+                    const input = cell.querySelector('input');
+                    if (input) input.disabled = true;
+                });
+            }
+            
+            // Show/hide changes indicator
+            changesIndicator.style.display = hasUnsavedChanges ? 'inline' : 'none';
+        }
+        
+        // Mark as changed
+        function markAsChanged() {
+            hasUnsavedChanges = true;
+            updateEditModeUI();
+        }
+        
+        // Update product field
+        function updateProductField(productIndex, field, value) {
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                if (productIndex >= 0 && productIndex < order.products.length) {
+                    if (field === 'quantity') {
+                        const newQuantity = parseFloat(value) || 0;
+                        order.products[productIndex].quantity = newQuantity;
+                        // Recalculate net price
+                        order.products[productIndex].netPrice = newQuantity * order.products[productIndex].unitPrice;
+                        
+                        // Update the net price display immediately
+                        const row = document.querySelector(`#productsTableBody tr:nth-child(${productIndex + 1})`);
+                        if (row) {
+                            const netCell = row.querySelector('td:last-child');
+                            if (netCell) {
+                                netCell.textContent = `£${order.products[productIndex].netPrice.toFixed(2)}`;
+                            }
+                        }
+                        
+                        // Recalculate order total
+                        order.total = order.products.reduce((sum, product) => sum + product.netPrice, 0);
+                        document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
+                        
+                    } else if (field === 'productCode') {
+                        order.products[productIndex].productCode = value.toUpperCase();
+                    }
+                    
+                    // Update processed orders array
+                    const processedOrderIndex = processedOrders.findIndex(o => o.filename === order.filename);
+                    if (processedOrderIndex >= 0) {
+                        processedOrders[processedOrderIndex] = order;
+                    }
+                    
+                    markAsChanged();
+                }
+            }
+        }
+        
+        // Save changes
+        function saveChanges() {
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                
+                // Update order data from form fields
+                order.poNumber = document.getElementById('orderPO').value;
+                order.orderDate = convertDateFromInput(document.getElementById('orderDate').value);
+                order.deliveryDate = convertDateFromInput(document.getElementById('deliveryDate').value);
+                
+                // Update processed orders array
+                const processedOrderIndex = processedOrders.findIndex(o => o.filename === order.filename);
+                if (processedOrderIndex >= 0) {
+                    processedOrders[processedOrderIndex] = order;
+                }
+                
+                // Update display with new data
+                updateExtractedDataDisplay(order);
+                
+                hasUnsavedChanges = false;
+                updateEditModeUI();
+                
+                alert('✅ Changes saved successfully!');
+                
+                // Update summary stats
+                displayResults();
             }
         }
         
