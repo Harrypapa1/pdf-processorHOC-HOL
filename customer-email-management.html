@@ -264,8 +264,8 @@
     <div class="container">
         <div class="header">
             <a href="email-order-processor.html" class="nav-link">← Back to Orders</a>
-            <h1>🔧 Customer Email Management</h1>
-            <p>Manage customer email mappings for order processing</p>
+            <h1>🔐 Customer Email Management</h1>
+            <p>Secure access to customer email mappings • Password Protected</p>
         </div>
         
         <div class="main-content">
@@ -319,8 +319,11 @@
                     <button class="btn btn-danger" onclick="confirmClearAllMappings()">Clear All Mappings</button>
                 </div>
                 
-                <div id="mappingsDisplay" class="mappings-display" style="display: none;">
-                    <!-- Mappings will be loaded here -->
+                <div id="mappingsDisplay" class="mappings-display">
+                    <div style="text-align: center; color: #7f8c8d; padding: 40px;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                        Loading email mappings...
+                    </div>
                 </div>
             </div>
 
@@ -334,7 +337,8 @@
                 </div>
                 
                 <div class="help-section">
-                    <h4>🛡️ Backup Recommendations:</h4>
+                    <h4>🛡️ Security & Backup:</h4>
+                    <p>This page is password protected to secure customer data</p>
                     <p>Regularly export your email mappings as a backup</p>
                     <p>Keep a local copy in case you need to restore the database</p>
                 </div>
@@ -487,10 +491,8 @@
                 document.getElementById('customerName').value = '';
                 document.getElementById('customerEmail').value = '';
                 
-                // Refresh display if currently shown
-                if (document.getElementById('mappingsDisplay').style.display !== 'none') {
-                    displayCurrentMappings();
-                }
+                // Auto-refresh display
+                displayCurrentMappings();
             }
         }
 
@@ -507,10 +509,8 @@
                 alert(`Successfully uploaded ${count} customer email mappings!`);
                 document.getElementById('csvEmails').value = '';
                 
-                // Refresh display if currently shown
-                if (document.getElementById('mappingsDisplay').style.display !== 'none') {
-                    displayCurrentMappings();
-                }
+                // Auto-refresh display
+                displayCurrentMappings();
             } catch (error) {
                 alert('Error uploading emails: ' + error.message);
             }
@@ -532,15 +532,34 @@
             const displayDiv = document.getElementById('mappingsDisplay');
             
             if (emailMappingsCache.size === 0) {
-                displayDiv.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">No email mappings found. Add some using the forms above.</p>';
+                displayDiv.innerHTML = `
+                    <div style="text-align: center; color: #7f8c8d; padding: 40px;">
+                        <div style="font-size: 3rem; margin-bottom: 15px;">📭</div>
+                        <h4 style="color: #2c3e50; margin-bottom: 10px;">No Email Mappings Found</h4>
+                        <p>Add customer email mappings using the forms above.</p>
+                    </div>
+                `;
             } else {
-                let html = '';
-                emailMappingsCache.forEach((data, customerCode) => {
+                let html = `
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                        <strong style="color: #27ae60; font-size: 1.1rem;">
+                            📊 ${emailMappingsCache.size} Customer Email Mappings Loaded
+                        </strong>
+                    </div>
+                `;
+                
+                // Sort mappings by customer code for better organization
+                const sortedMappings = Array.from(emailMappingsCache.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                
+                sortedMappings.forEach(([customerCode, data]) => {
                     html += `
                         <div class="mapping-item">
-                            <div>
+                            <div style="flex: 1;">
                                 <div class="mapping-code">${customerCode}</div>
                                 <div class="mapping-email">${data.name} → ${data.email}</div>
+                                <div style="font-size: 0.8rem; color: #95a5a6; margin-top: 5px;">
+                                    Added: ${data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : 'Unknown'}
+                                </div>
                             </div>
                             <button class="delete-btn" onclick="deleteMapping('${customerCode}')">Delete</button>
                         </div>
@@ -644,7 +663,41 @@
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('Customer Email Management page loaded');
+            
+            // Password protection
+            // 🔧 TO CHANGE PASSWORD: Update the line below with your desired password
+            const correctPassword = 'hoc2025'; // Change this to your desired password
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (attempts < maxAttempts) {
+                const enteredPassword = prompt(`🔐 Enter password to access Customer Email Management:\n\nAttempt ${attempts + 1} of ${maxAttempts}`);
+                
+                if (enteredPassword === null) {
+                    // User clicked cancel
+                    alert('Access denied. Redirecting to main page...');
+                    window.location.href = 'email-order-processor.html';
+                    return;
+                }
+                
+                if (enteredPassword === correctPassword) {
+                    alert('✅ Access granted! Welcome to Customer Email Management.');
+                    break;
+                }
+                
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    alert('❌ Too many incorrect attempts. Redirecting to main page...');
+                    window.location.href = 'email-order-processor.html';
+                    return;
+                } else {
+                    alert(`❌ Incorrect password. ${maxAttempts - attempts} attempts remaining.`);
+                }
+            }
+            
+            // Load and display existing mappings automatically
             await loadCustomerEmailsFromFirestore();
+            displayCurrentMappings();
         });
     </script>
 </body>
