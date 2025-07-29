@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Email Management - Order Processing System</title>
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .nav-link {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            text-decoration: none;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-50%) translateX(5px);
+        }
+        
+        .main-content {
+            padding: 40px;
+        }
+        
+        .admin-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 2px solid #e3e8ef;
+        }
+        
+        .admin-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .admin-input {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .admin-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .admin-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 120px;
+            margin: 10px 0;
+        }
+        
+        .admin-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+        
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid #667eea;
+        }
+        
+        .status-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .status-label {
+            color: #7f8c8d;
+            font-size: 1rem;
+        }
+        
+        .mappings-display {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e3e8ef;
+        }
+        
+        .mapping-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .mapping-item:last-child {
+            border-bottom: none;
+        }
+        
+        .mapping-code {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .mapping-email {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+        
+        .help-section {
+            background: #e8f5e8;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 5px solid #27ae60;
+        }
+        
+        .help-section h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+        
+        .help-section p {
+            color: #2c3e50;
+            line-height: 1.6;
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .nav-link {
+                position: static;
+                transform: none;
+                display: inline-block;
+                margin-bottom: 15px;
+            }
+            
+            .header {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="email-order-processor.html" class="nav-link">← Back to Orders</a>
+            <h1>🔧 Customer Email Management</h1>
+            <p>Manage customer email mappings for order processing</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- Status Card -->
+            <div class="status-card">
+                <div class="status-number" id="mappingCount">0</div>
+                <div class="status-label">Customer email mappings loaded</div>
+            </div>
+
+            <!-- Single Customer Entry -->
+            <div class="admin-section">
+                <h3>📝 Add Single Customer Email</h3>
+                
+                <div class="admin-grid">
+                    <input type="text" id="customerCode" placeholder="Customer Code (e.g., 07BELLA)" class="admin-input">
+                    <input type="text" id="customerName" placeholder="Customer Name" class="admin-input">
+                    <input type="email" id="customerEmail" placeholder="customer@email.com" class="admin-input">
+                    <button class="btn btn-success" onclick="addSingleCustomerEmail()">Add Email</button>
+                </div>
+                
+                <div class="help-section">
+                    <h4>💡 How to use:</h4>
+                    <p><strong>Customer Code:</strong> The short code from PDF orders (e.g., 07BELLA, 13RREST)</p>
+                    <p><strong>Customer Name:</strong> Full business name (e.g., BELLA_KITCHEN, RIVER_KITCHEN)</p>
+                    <p><strong>Email:</strong> Where order confirmations should be sent</p>
+                </div>
+            </div>
+
+            <!-- Batch Upload Section -->
+            <div class="admin-section">
+                <h3>📊 Batch Upload CSV</h3>
+                
+                <div>
+                    <textarea id="csvEmails" rows="8" placeholder="CustomerCode,CustomerName,Email&#10;07BELLA,BELLA_KITCHEN,bella@example.com&#10;13RREST,RIVER_KITCHEN,river@example.com&#10;92TABLE,TABLE_KITCHEN,table@example.com" class="admin-textarea"></textarea>
+                    <button class="btn btn-success" onclick="batchUploadEmails()">Upload Batch</button>
+                </div>
+                
+                <div class="help-section">
+                    <h4>📋 CSV Format:</h4>
+                    <p>Each line should contain: <strong>CustomerCode,CustomerName,Email</strong></p>
+                    <p>No headers needed - just paste your data and click Upload Batch</p>
+                </div>
+            </div>
+
+            <!-- Current Mappings Display -->
+            <div class="admin-section">
+                <h3>📋 Current Email Mappings</h3>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn" onclick="loadAndDisplayMappings()">Refresh Mappings</button>
+                    <button class="btn btn-danger" onclick="confirmClearAllMappings()">Clear All Mappings</button>
+                </div>
+                
+                <div id="mappingsDisplay" class="mappings-display" style="display: none;">
+                    <!-- Mappings will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Export/Import Section -->
+            <div class="admin-section">
+                <h3>💾 Backup & Export</h3>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn" onclick="exportMappingsToCSV()">Export to CSV</button>
+                    <button class="btn" onclick="downloadMappingsBackup()">Download Backup</button>
+                </div>
+                
+                <div class="help-section">
+                    <h4>🛡️ Backup Recommendations:</h4>
+                    <p>Regularly export your email mappings as a backup</p>
+                    <p>Keep a local copy in case you need to restore the database</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeNUflDD7eEiZS9ZE5Z1WwiAMP8Nx4krY",
+            authDomain: "email-order-system.firebaseapp.com",
+            projectId: "email-order-system",
+            storageBucket: "email-order-system.firebasestorage.app",
+            messagingSenderId: "148310260005",
+            appId: "1:148310260005:web:65014f7b35ebd7e46ec2cc"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Global variables
+        let emailMappingsCache = new Map();
+        let lastCacheUpdate = 0;
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+        // Firebase Functions
+        async function loadCustomerEmailsFromFirestore() {
+            try {
+                console.log('Loading customer emails from Firestore...');
+                
+                const snapshot = await db.collection('customerEmails').get();
+                
+                emailMappingsCache.clear();
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    emailMappingsCache.set(data.customerCode, {
+                        email: data.email,
+                        name: data.customerName,
+                        code: data.customerCode,
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt
+                    });
+                });
+                
+                lastCacheUpdate = Date.now();
+                console.log(`Loaded ${emailMappingsCache.size} customer email mappings`);
+                updateMappingCount();
+                
+                return emailMappingsCache;
+            } catch (error) {
+                console.error('Error loading customer emails:', error);
+                alert('Error loading customer emails: ' + error.message);
+                return emailMappingsCache;
+            }
+        }
+
+        async function addCustomerEmail(customerCode, customerName, email) {
+            try {
+                const docData = {
+                    customerCode: customerCode,
+                    customerName: customerName,
+                    email: email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('customerEmails').doc(customerCode).set(docData);
+                
+                emailMappingsCache.set(customerCode, {
+                    email: email,
+                    name: customerName,
+                    code: customerCode,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                });
+                
+                console.log(`Added email mapping: ${customerCode} -> ${email}`);
+                updateMappingCount();
+                return true;
+            } catch (error) {
+                console.error('Error adding customer email:', error);
+                alert('Error adding customer email: ' + error.message);
+                return false;
+            }
+        }
+
+        async function deleteCustomerEmail(customerCode) {
+            try {
+                await db.collection('customerEmails').doc(customerCode).delete();
+                emailMappingsCache.delete(customerCode);
+                console.log(`Deleted email mapping: ${customerCode}`);
+                updateMappingCount();
+                return true;
+            } catch (error) {
+                console.error('Error deleting customer email:', error);
+                alert('Error deleting customer email: ' + error.message);
+                return false;
+            }
+        }
+
+        async function batchUploadCustomerEmails(csvText) {
+            try {
+                const lines = csvText.trim().split('\n');
+                const batch = db.batch();
+                let count = 0;
+                
+                for (const line of lines) {
+                    const [customerCode, customerName, email] = line.split(',').map(s => s.trim());
+                    
+                    if (customerCode && email) {
+                        const docRef = db.collection('customerEmails').doc(customerCode);
+                        batch.set(docRef, {
+                            customerCode,
+                            customerName: customerName || customerCode,
+                            email,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        count++;
+                    }
+                }
+                
+                await batch.commit();
+                console.log(`Batch uploaded ${count} customer email mappings`);
+                
+                await loadCustomerEmailsFromFirestore();
+                return count;
+            } catch (error) {
+                console.error('Error batch uploading:', error);
+                throw error;
+            }
+        }
+
+        // UI Functions
+        async function addSingleCustomerEmail() {
+            const code = document.getElementById('customerCode').value.trim();
+            const name = document.getElementById('customerName').value.trim();
+            const email = document.getElementById('customerEmail').value.trim();
+            
+            if (!code || !email) {
+                alert('Customer Code and Email are required');
+                return;
+            }
+            
+            const success = await addCustomerEmail(code, name, email);
+            if (success) {
+                alert('Customer email added successfully!');
+                document.getElementById('customerCode').value = '';
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+                
+                // Refresh display if currently shown
+                if (document.getElementById('mappingsDisplay').style.display !== 'none') {
+                    displayCurrentMappings();
+                }
+            }
+        }
+
+        async function batchUploadEmails() {
+            const csvText = document.getElementById('csvEmails').value.trim();
+            
+            if (!csvText) {
+                alert('Please enter CSV data');
+                return;
+            }
+            
+            try {
+                const count = await batchUploadCustomerEmails(csvText);
+                alert(`Successfully uploaded ${count} customer email mappings!`);
+                document.getElementById('csvEmails').value = '';
+                
+                // Refresh display if currently shown
+                if (document.getElementById('mappingsDisplay').style.display !== 'none') {
+                    displayCurrentMappings();
+                }
+            } catch (error) {
+                alert('Error uploading emails: ' + error.message);
+            }
+        }
+
+        function updateMappingCount() {
+            const countElement = document.getElementById('mappingCount');
+            if (countElement) {
+                countElement.textContent = emailMappingsCache.size;
+            }
+        }
+
+        async function loadAndDisplayMappings() {
+            await loadCustomerEmailsFromFirestore();
+            displayCurrentMappings();
+        }
+
+        function displayCurrentMappings() {
+            const displayDiv = document.getElementById('mappingsDisplay');
+            
+            if (emailMappingsCache.size === 0) {
+                displayDiv.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">No email mappings found. Add some using the forms above.</p>';
+            } else {
+                let html = '';
+                emailMappingsCache.forEach((data, customerCode) => {
+                    html += `
+                        <div class="mapping-item">
+                            <div>
+                                <div class="mapping-code">${customerCode}</div>
+                                <div class="mapping-email">${data.name} → ${data.email}</div>
+                            </div>
+                            <button class="delete-btn" onclick="deleteMapping('${customerCode}')">Delete</button>
+                        </div>
+                    `;
+                });
+                displayDiv.innerHTML = html;
+            }
+            
+            displayDiv.style.display = 'block';
+        }
+
+        async function deleteMapping(customerCode) {
+            if (confirm(`Are you sure you want to delete the mapping for ${customerCode}?`)) {
+                const success = await deleteCustomerEmail(customerCode);
+                if (success) {
+                    displayCurrentMappings(); // Refresh display
+                }
+            }
+        }
+
+        async function confirmClearAllMappings() {
+            if (confirm('Are you sure you want to delete ALL customer email mappings? This cannot be undone!')) {
+                if (confirm('This will permanently delete all email mappings. Type "DELETE ALL" to confirm.')) {
+                    // For extra safety, require user to type confirmation
+                    const confirmation = prompt('Type "DELETE ALL" to confirm:');
+                    if (confirmation === 'DELETE ALL') {
+                        await clearAllMappings();
+                    }
+                }
+            }
+        }
+
+        async function clearAllMappings() {
+            try {
+                const batch = db.batch();
+                const snapshot = await db.collection('customerEmails').get();
+                
+                snapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                emailMappingsCache.clear();
+                updateMappingCount();
+                displayCurrentMappings();
+                
+                alert('All email mappings have been deleted.');
+            } catch (error) {
+                console.error('Error clearing mappings:', error);
+                alert('Error clearing mappings: ' + error.message);
+            }
+        }
+
+        function exportMappingsToCSV() {
+            if (emailMappingsCache.size === 0) {
+                alert('No mappings to export');
+                return;
+            }
+            
+            let csvContent = 'CustomerCode,CustomerName,Email\n';
+            emailMappingsCache.forEach((data, customerCode) => {
+                csvContent += `${customerCode},${data.name},${data.email}\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customer_email_mappings_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function downloadMappingsBackup() {
+            if (emailMappingsCache.size === 0) {
+                alert('No mappings to backup');
+                return;
+            }
+            
+            const backup = {
+                exportDate: new Date().toISOString(),
+                totalMappings: emailMappingsCache.size,
+                mappings: Array.from(emailMappingsCache.entries()).map(([code, data]) => ({
+                    customerCode: code,
+                    customerName: data.name,
+                    email: data.email,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customer_mappings_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Customer Email Management page loaded');
+            await loadCustomerEmailsFromFirestore();
+        });
+    </script>
+</body>
+</html>
