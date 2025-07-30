@@ -1469,7 +1469,159 @@
             await loadProductConversionsFromFirestore();
         }
         
-        // Initialize the application
+        // Setup event listeners
+        function setupEventListeners() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // File input change
+            fileInput.addEventListener('change', handleFiles);
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('dragover');
+                
+                const files = Array.from(e.dataTransfer.files);
+                addFilesToQueue(files);
+            });
+            
+            uploadArea.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    fileInput.click();
+                }
+            });
+
+            // Window resize handler for PDF container
+            window.addEventListener('resize', () => {
+                if (currentPDF) {
+                    setTimeout(() => {
+                        renderPage(currentPage);
+                    }, 100);
+                }
+            });
+        }
+        
+        // Setup PDF Controls
+        function setupPDFControls() {
+            document.getElementById('prevPageBtn').addEventListener('click', prevPage);
+            document.getElementById('nextPageBtn').addEventListener('click', nextPage);
+            document.getElementById('fitWidthBtn').addEventListener('click', fitToWidth);
+        }
+        
+        // Handle file selection - add to queue instead of processing immediately
+        function handleFiles(event) {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                addFilesToQueue(files);
+            }
+        }
+        
+        // Add files to processing queue
+        function addFilesToQueue(files) {
+            const pdfFiles = files.filter(f => 
+                f.type === 'application/pdf' || 
+                f.name.toLowerCase().endsWith('.pdf')
+            );
+            
+            if (pdfFiles.length === 0) {
+                alert('Please select PDF files only.');
+                return;
+            }
+            
+            // Add files to queue with unique IDs
+            pdfFiles.forEach(file => {
+                const queueItem = {
+                    id: Date.now() + Math.random(), // Unique ID
+                    file: file,
+                    addedAt: new Date()
+                };
+                fileQueue.push(queueItem);
+            });
+            
+            updateQueueDisplay();
+            
+            // Clear the file input
+            document.getElementById('fileInput').value = '';
+        }
+        
+        // Update queue display
+        function updateQueueDisplay() {
+            const queueSection = document.getElementById('queueSection');
+            const queueList = document.getElementById('queueList');
+            const queueCount = document.getElementById('queueCount');
+            const processAllBtn = document.getElementById('processAllBtn');
+            
+            if (fileQueue.length === 0) {
+                queueSection.style.display = 'none';
+                return;
+            }
+            
+            queueSection.style.display = 'block';
+            queueCount.textContent = `${fileQueue.length} file${fileQueue.length !== 1 ? 's' : ''}`;
+            
+            // Update queue list
+            queueList.innerHTML = '';
+            fileQueue.forEach(queueItem => {
+                const queueItemDiv = document.createElement('div');
+                queueItemDiv.className = 'queue-item';
+                queueItemDiv.innerHTML = `
+                    <div class="queue-item-info">
+                        <div class="queue-item-name">📄 ${queueItem.file.name}</div>
+                        <div class="queue-item-details">
+                            ${formatFileSize(queueItem.file.size)} • Added ${formatTimeAgo(queueItem.addedAt)}
+                        </div>
+                    </div>
+                    <div class="queue-item-actions">
+                        <button class="btn-remove" onclick="removeFromQueue('${queueItem.id}')">
+                            Remove
+                        </button>
+                    </div>
+                `;
+                queueList.appendChild(queueItemDiv);
+            });
+            
+            // Enable/disable process button
+            processAllBtn.disabled = fileQueue.length === 0;
+        }
+        
+        // Helper functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            
+            if (diffMins < 1) return 'just now';
+            if (diffMins === 1) return '1 minute ago';
+            if (diffMins < 60) return `${diffMins} minutes ago`;
+            
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours === 1) return '1 hour ago';
+            if (diffHours < 24) return `${diffHours} hours ago`;
+            
+            return date.toLocaleDateString();
+        }
         async function init() {
             await initializeMappings();
             setupEventListeners();
@@ -3189,6 +3341,55 @@
             alert(successMessage);
         }
         
+        // Global functions for queue management and other HTML onclick attributes
+        window.removeFromQueue = function(id) {
+            fileQueue = fileQueue.filter(item => item.id !== id);
+            updateQueueDisplay();
+        };
+        
+        window.clearQueue = function() {
+            if (fileQueue.length === 0) return;
+            
+            const confirmClear = confirm(`Are you sure you want to remove all ${fileQueue.length} file(s) from the queue?`);
+            if (confirmClear) {
+                fileQueue = [];
+                updateQueueDisplay();
+            }
+        };
+        
+        window.processAllQueuedFiles = async function() {
+            if (fileQueue.length === 0) {
+                alert('No files in queue to process.');
+                return;
+            }
+            
+            const files = fileQueue.map(item => item.file);
+            
+            // Clear the queue as we're processing them
+            fileQueue = [];
+            updateQueueDisplay();
+            
+            // Process all files
+            await processFiles(files);
+        };
+        
+        window.handleDuplicateChoice = function(shouldProcess) {
+            // Remove the duplicate warning section
+            const duplicateSection = document.getElementById('duplicateWarningSection');
+            if (duplicateSection) {
+                duplicateSection.remove();
+            }
+            
+            // Show processing section again
+            document.getElementById('processingSection').style.display = 'block';
+            
+            // Resolve the promise with user's choice
+            if (window.currentDuplicateResolve) {
+                window.currentDuplicateResolve(shouldProcess);
+                window.currentDuplicateResolve = null;
+            }
+        };
+        
         // Global functions for HTML onclick attributes
         window.approveCurrentOrder = approveCurrentOrder;
         window.toggleEditMode = toggleEditMode;
@@ -3202,7 +3403,15 @@
         window.fitToWidth = fitToWidth;
         window.exportToExcel = exportToExcel;
         
-        // Initialize when page loads
+        // Display processing results
+        function displayResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            // Update export section
+            updateExportSection();
+            
+            resultsSection.style.display = 'block';
+        }
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
