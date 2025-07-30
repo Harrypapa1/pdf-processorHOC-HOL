@@ -715,105 +715,7 @@
             transform: translateY(-2px);
         }
 
-        /* Recent Orders Section */
-        .recent-orders-section {
-            background: #f8fafc;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 40px 0 20px 0;
-            border-top: 3px solid #667eea;
-        }
 
-        .recent-orders-section h3 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .view-all-link {
-            color: #667eea;
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: normal;
-            transition: all 0.3s ease;
-        }
-
-        .view-all-link:hover {
-            color: #5a67d8;
-            text-decoration: underline;
-        }
-
-        .recent-orders-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .recent-orders-table th {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 12px 15px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .recent-orders-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e3e8ef;
-            font-size: 0.85rem;
-        }
-
-        .recent-orders-table tr:hover {
-            background: #f8fafc;
-        }
-
-        .recent-orders-table tr:nth-child(even) {
-            background: #fafafa;
-        }
-
-        .recent-orders-table tr:nth-child(even):hover {
-            background: #f0f0f0;
-        }
-
-        .customer-code-cell {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .po-number-cell {
-            font-family: 'Courier New', monospace;
-            color: #e74c3c;
-        }
-
-        .date-cell {
-            color: #7f8c8d;
-            font-size: 0.8rem;
-        }
-
-        .recent-orders-loading {
-            text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
-        }
-
-        .recent-orders-empty {
-            text-align: center;
-            padding: 40px 20px;
-            color: #7f8c8d;
-        }
-
-        .recent-orders-empty .empty-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
 
         /* Conversion Status Section */
         .conversion-status {
@@ -950,15 +852,6 @@
             
             .order-summary {
                 grid-template-columns: 1fr;
-            }
-
-            .recent-orders-table {
-                font-size: 0.8rem;
-            }
-
-            .recent-orders-table th,
-            .recent-orders-table td {
-                padding: 8px 10px;
             }
 
             .conversion-stats {
@@ -1166,42 +1059,6 @@
                         Download Excel File
                     </button>
                 </div>
-            </div>
-
-            <!-- Recent Orders Section -->
-            <div class="recent-orders-section" id="recentOrdersSection">
-                <h3>
-                    📋 Recent Orders
-                    <a href="/order-history.html" class="view-all-link">View All History →</a>
-                </h3>
-                
-                <div id="recentOrdersLoading" class="recent-orders-loading">
-                    Loading recent orders...
-                </div>
-                
-                <div id="recentOrdersContent" style="display: none;">
-                    <table class="recent-orders-table" id="recentOrdersTable">
-                        <thead>
-                            <tr>
-                                <th>Exported</th>
-                                <th>Customer Code</th>
-                                <th>Customer Name</th>
-                                <th>PO Number</th>
-                                <th>Order Date</th>
-                                <th>Products</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentOrdersTableBody">
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div id="recentOrdersEmpty" class="recent-orders-empty" style="display: none;">
-                    <div class="empty-icon">📦</div>
-                    <p><strong>No orders exported yet</strong></p>
-                    <p>Once you export your first order, the last 10 will appear here</p>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -1537,9 +1394,6 @@
                 await batch.commit();
                 console.log(`Successfully saved ${orders.length} orders to history`);
                 
-                // Refresh recent orders display
-                loadRecentOrders();
-                
             } catch (error) {
                 console.error('Error saving order history:', error);
                 // Don't block the export if history saving fails
@@ -1570,94 +1424,6 @@
                 console.error('Error loading processed PO numbers:', error);
                 // Don't throw error - duplicate detection will still work for current session
             }
-        }
-        async function loadRecentOrders() {
-            try {
-                const recentOrdersLoading = document.getElementById('recentOrdersLoading');
-                const recentOrdersContent = document.getElementById('recentOrdersContent');
-                const recentOrdersEmpty = document.getElementById('recentOrdersEmpty');
-                
-                recentOrdersLoading.style.display = 'block';
-                recentOrdersContent.style.display = 'none';
-                recentOrdersEmpty.style.display = 'none';
-                
-                const snapshot = await db.collection('orderHistory')
-                    .orderBy('exportedAt', 'desc')
-                    .limit(10)
-                    .get();
-                
-                const orders = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    orders.push({
-                        ...data,
-                        exportedAt: data.exportedAt.toDate()
-                    });
-                });
-                
-                recentOrdersLoading.style.display = 'none';
-                
-                if (orders.length === 0) {
-                    recentOrdersEmpty.style.display = 'block';
-                } else {
-                    displayRecentOrders(orders);
-                    recentOrdersContent.style.display = 'block';
-                }
-                
-            } catch (error) {
-                console.error('Error loading recent orders:', error);
-                document.getElementById('recentOrdersLoading').innerHTML = 
-                    '<p style="color: #e74c3c;">Error loading recent orders</p>';
-            }
-        }
-
-        // Display recent orders in table
-        function displayRecentOrders(orders) {
-            const tableBody = document.getElementById('recentOrdersTableBody');
-            tableBody.innerHTML = '';
-            
-            orders.forEach(order => {
-                const row = tableBody.insertRow();
-                row.innerHTML = `
-                    <td class="date-cell">${formatRecentOrderDate(order.exportedAt)}</td>
-                    <td class="customer-code-cell">${order.customerCode || 'N/A'}</td>
-                    <td>${truncateText(order.customerName || 'N/A', 20)}</td>
-                    <td class="po-number-cell">${order.purchaseOrderNumber || 'N/A'}</td>
-                    <td class="date-cell">${order.orderDate || 'N/A'}</td>
-                    <td style="text-align: center;">${order.totalProducts || 0}</td>
-                `;
-            });
-        }
-
-        // Format date for recent orders display
-        function formatRecentOrderDate(date) {
-            if (!date) return 'N/A';
-            
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / (1000 * 60));
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            
-            if (diffMins < 60) {
-                return diffMins <= 1 ? 'Just now' : `${diffMins}m ago`;
-            } else if (diffHours < 24) {
-                return `${diffHours}h ago`;
-            } else if (diffDays < 7) {
-                return `${diffDays}d ago`;
-            } else {
-                return date.toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: '2-digit'
-                });
-            }
-        }
-
-        // Truncate text with ellipsis
-        function truncateText(text, maxLength) {
-            if (text.length <= maxLength) return text;
-            return text.substring(0, maxLength - 3) + '...';
         }
         
         // Initialize known mappings
@@ -1695,8 +1461,7 @@
             setupEventListeners();
             setupPDFControls();
             
-            // Load recent orders and processed PO numbers on page load
-            loadRecentOrders();
+            // Load processed PO numbers on page load
             await loadProcessedPONumbers();
             
             console.log('App initialized successfully');
