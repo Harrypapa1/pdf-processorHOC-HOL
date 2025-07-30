@@ -191,7 +191,7 @@
             transition: width 0.3s ease;
         }
         
-        /* New Two-Column Layout */
+        /* Updated PDF Viewer Layout */
         .pdf-viewer-section {
             display: none;
             margin: 30px 0;
@@ -209,6 +209,8 @@
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         
         .pdf-viewer-header {
@@ -216,6 +218,7 @@
             padding: 20px;
             border-bottom: 1px solid #e3e8ef;
             text-align: center;
+            flex-shrink: 0;
         }
         
         .pdf-viewer-header h3 {
@@ -223,24 +226,30 @@
             margin-bottom: 5px;
         }
         
+        /* Improved PDF Canvas Container */
         .pdf-canvas-container {
             padding: 20px;
             text-align: center;
             background: #f8fafc;
-            min-height: 600px;
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: auto;
+            min-height: 400px;
+            max-height: 80vh;
         }
         
         .pdf-canvas {
-            max-width: 100%;
-            max-height: 600px;
             border: 1px solid #e3e8ef;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: white;
+            max-width: 100%;
+            height: auto;
         }
         
+        /* Enhanced PDF Controls */
         .pdf-controls {
             padding: 15px 20px;
             background: white;
@@ -248,31 +257,48 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
         }
         
         .pdf-control-btn {
             background: #667eea;
             color: white;
             border: none;
-            padding: 8px 15px;
+            padding: 8px 12px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
         }
         
         .pdf-control-btn:hover {
             background: #5a67d8;
+            transform: translateY(-1px);
         }
         
         .pdf-control-btn:disabled {
             background: #cbd5e0;
             cursor: not-allowed;
+            transform: none;
+        }
+        
+        .pdf-control-btn.active {
+            background: #2ecc71;
         }
         
         .page-info {
             color: #7f8c8d;
             font-size: 0.9rem;
+            margin: 0 10px;
+        }
+        
+        .zoom-info {
+            color: #7f8c8d;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin: 0 5px;
         }
         
         .extracted-data {
@@ -730,6 +756,15 @@
             .conversion-stats {
                 grid-template-columns: 1fr 1fr;
             }
+            
+            .pdf-controls {
+                gap: 5px;
+            }
+            
+            .pdf-control-btn {
+                padding: 6px 8px;
+                font-size: 0.75rem;
+            }
         }
     </style>
 </head>
@@ -789,10 +824,13 @@
                             <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
                         </div>
                         <div class="pdf-controls">
-                            <button class="pdf-control-btn" id="prevPageBtn">← Previous</button>
+                            <button class="pdf-control-btn" id="prevPageBtn">← Prev</button>
                             <span class="page-info" id="pageInfo">Page 1 of 1</span>
                             <button class="pdf-control-btn" id="nextPageBtn">Next →</button>
+                            <div style="margin: 0 10px; border-left: 1px solid #e3e8ef; height: 20px;"></div>
+                            <button class="pdf-control-btn" id="fitWidthBtn">Fit Width</button>
                             <button class="pdf-control-btn" onclick="zoomOut()">Zoom -</button>
+                            <span class="zoom-info" id="zoomInfo">100%</span>
                             <button class="pdf-control-btn" onclick="zoomIn()">Zoom +</button>
                         </div>
                     </div>
@@ -966,9 +1004,11 @@
         let currentPDF = null;
         let currentPage = 1;
         let totalPages = 1;
-        let currentScale = 1.2;
+        let currentScale = 1.0;
         let pdfFiles = [];
         let currentFileIndex = 0;
+        let originalViewport = null;
+        let containerWidth = 0;
 
         // Edit mode variables
         let isEditMode = false;
@@ -1437,12 +1477,22 @@
                     fileInput.click();
                 }
             });
+
+            // Window resize handler for PDF container
+            window.addEventListener('resize', () => {
+                if (currentPDF) {
+                    setTimeout(() => {
+                        renderPage(currentPage);
+                    }, 100);
+                }
+            });
         }
         
         // Setup PDF Controls
         function setupPDFControls() {
             document.getElementById('prevPageBtn').addEventListener('click', prevPage);
             document.getElementById('nextPageBtn').addEventListener('click', nextPage);
+            document.getElementById('fitWidthBtn').addEventListener('click', fitToWidth);
         }
         
         // Handle file selection
@@ -1563,6 +1613,13 @@
                 // Update filename display
                 document.getElementById('currentFileName').textContent = pdfFile.file.name;
                 
+                // Get container dimensions for smart scaling
+                const container = document.querySelector('.pdf-canvas-container');
+                containerWidth = container.clientWidth - 40; // Account for padding
+                
+                // Calculate smart initial scale
+                await calculateSmartScale();
+                
                 // Render first page
                 await renderPage(1);
                 
@@ -1579,7 +1636,32 @@
             }
         }
         
-        // Render PDF page
+        // Calculate smart initial scale
+        async function calculateSmartScale() {
+            if (!currentPDF) return;
+            
+            try {
+                const page = await currentPDF.getPage(1);
+                originalViewport = page.getViewport({ scale: 1.0 });
+                
+                // Calculate scale to fit width of container
+                const widthScale = containerWidth / originalViewport.width;
+                
+                // Don't make it too small or too large
+                const minScale = 0.5;
+                const maxScale = 2.0;
+                const smartScale = Math.max(minScale, Math.min(maxScale, widthScale * 0.9)); // 90% of container width
+                
+                currentScale = smartScale;
+                console.log(`Smart scale calculated: ${currentScale.toFixed(2)} (container: ${containerWidth}px, PDF: ${originalViewport.width}px)`);
+                
+            } catch (error) {
+                console.error('Error calculating smart scale:', error);
+                currentScale = 1.2; // Fallback scale
+            }
+        }
+        
+        // Render PDF page with improved scaling
         async function renderPage(pageNum) {
             if (!currentPDF) return;
             
@@ -1589,8 +1671,13 @@
                 const ctx = canvas.getContext('2d');
                 
                 const viewport = page.getViewport({ scale: currentScale });
+                
+                // Set canvas dimensions
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
                 const renderContext = {
                     canvasContext: ctx,
@@ -1602,13 +1689,37 @@
                 // Update page info
                 document.getElementById('pageInfo').textContent = `Page ${pageNum} of ${totalPages}`;
                 
+                // Update zoom info
+                const zoomPercent = Math.round(currentScale * 100);
+                document.getElementById('zoomInfo').textContent = `${zoomPercent}%`;
+                
                 // Update button states
                 document.getElementById('prevPageBtn').disabled = pageNum <= 1;
                 document.getElementById('nextPageBtn').disabled = pageNum >= totalPages;
                 
+                // Update fit width button state
+                const fitWidthBtn = document.getElementById('fitWidthBtn');
+                const isAtFitWidth = Math.abs(currentScale - calculateFitWidthScale()) < 0.01;
+                fitWidthBtn.classList.toggle('active', isAtFitWidth);
+                
             } catch (error) {
                 console.error('Error rendering page:', error);
             }
+        }
+        
+        // Calculate fit-to-width scale
+        function calculateFitWidthScale() {
+            if (!originalViewport || !containerWidth) return 1.0;
+            return (containerWidth * 0.9) / originalViewport.width;
+        }
+        
+        // Fit to width function
+        async function fitToWidth() {
+            if (!originalViewport) return;
+            
+            const newScale = calculateFitWidthScale();
+            currentScale = newScale;
+            await renderPage(currentPage);
         }
         
         // PDF Navigation
@@ -1625,12 +1736,12 @@
         }
         
         function zoomIn() {
-            currentScale = Math.min(currentScale * 1.2, 3.0);
+            currentScale = Math.min(currentScale * 1.25, 3.0);
             renderPage(currentPage);
         }
         
         function zoomOut() {
-            currentScale = Math.max(currentScale / 1.2, 0.5);
+            currentScale = Math.max(currentScale / 1.25, 0.3);
             renderPage(currentPage);
         }
         
