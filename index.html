@@ -1793,9 +1793,6 @@
                             <input type="text" value="${product.productCode}" 
                                    onchange="updateProductField(${index}, 'productCode', this.value)" 
                                    style="text-transform: uppercase;" />
-                            <div style="font-size: 0.7rem; color: #3498db; margin-top: 2px;">
-                                Export: ${skuWithSuffix}
-                            </div>
                         </td>
                         <td>${product.caseSize}</td>
                         <td>£${product.unitPrice.toFixed(2)}</td>
@@ -1928,18 +1925,7 @@
                         const convertedProduct = convertDecimalQuantity(product);
                         order.products[productIndex] = convertedProduct;
                         
-                        // Update the export SKU display immediately
-                        const row = document.querySelector(`#productsTableBody tr:nth-child(${productIndex + 1})`);
-                        if (row) {
-                            const skuCell = row.querySelector('td:nth-child(3)');
-                            if (skuCell) {
-                                const exportDiv = skuCell.querySelector('div');
-                                if (exportDiv) {
-                                    const skuWithSuffix = convertedProduct.productCode + getSKUSuffix(convertedProduct);
-                                    exportDiv.textContent = `Export: ${skuWithSuffix}`;
-                                }
-                            }
-                        }
+                        // Export SKU handling is done during export only
                         
                         // Update conversion statistics
                         updateConversionStats();
