@@ -733,6 +733,77 @@
             color: #2e7d32;
         }
         
+        /* Duplicate Order Warning */
+        .duplicate-warning {
+            background: #ffebee;
+            border: 3px solid #f44336;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .duplicate-warning h3 {
+            color: #d32f2f;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .duplicate-warning p {
+            color: #d32f2f;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .duplicate-warning .po-highlight {
+            background: #d32f2f;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .duplicate-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-skip {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-skip:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+        }
+        
+        .btn-process-anyway {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-process-anyway:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+        
         @media (max-width: 768px) {
             .viewer-container {
                 grid-template-columns: 1fr;
@@ -1012,6 +1083,7 @@
         let productConversionsCache = new Map(); // NEW: Store product conversions
         let lastCacheUpdate = 0;
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        let processedPONumbers = new Set(); // Track processed PO numbers to prevent duplicates
 
         // PDF Viewer variables
         let currentPDF = null;
@@ -1329,7 +1401,31 @@
             }
         }
 
-        // Load and display recent orders
+        // Load processed PO numbers from order history
+        async function loadProcessedPONumbers() {
+            try {
+                console.log('Loading processed PO numbers from order history...');
+                
+                const snapshot = await db.collection('orderHistory')
+                    .orderBy('exportedAt', 'desc')
+                    .limit(1000) // Load last 1000 orders to check for duplicates
+                    .get();
+                
+                processedPONumbers.clear();
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.purchaseOrderNumber) {
+                        processedPONumbers.add(data.purchaseOrderNumber);
+                    }
+                });
+                
+                console.log(`Loaded ${processedPONumbers.size} processed PO numbers for duplicate detection`);
+                
+            } catch (error) {
+                console.error('Error loading processed PO numbers:', error);
+                // Don't throw error - duplicate detection will still work for current session
+            }
+        }
         async function loadRecentOrders() {
             try {
                 const recentOrdersLoading = document.getElementById('recentOrdersLoading');
@@ -1454,8 +1550,9 @@
             setupEventListeners();
             setupPDFControls();
             
-            // Load recent orders on page load
+            // Load recent orders and processed PO numbers on page load
             loadRecentOrders();
+            await loadProcessedPONumbers();
             
             console.log('App initialized successfully');
         }
@@ -1530,12 +1627,13 @@
             }
         }
         
-        // Process PDF files
+        // Process PDF files with duplicate detection
         async function processFiles(files) {
             document.getElementById('processingSection').style.display = 'block';
             document.getElementById('pdfViewerSection').style.display = 'none';
             document.getElementById('resultsSection').style.display = 'none';
             
+            // Clear current session but keep historical PO numbers for duplicate detection
             processedOrders = [];
             pdfFiles = [];
             
@@ -1546,6 +1644,17 @@
                 try {
                     const order = await processPDF(file);
                     if (order) {
+                        // Check for duplicate PO number (both historical and current session)
+                        const poNumber = order.poNumber || '';
+                        if (poNumber && processedPONumbers.has(poNumber)) {
+                            // Show duplicate warning and wait for user decision
+                            const shouldProcess = await showDuplicateWarning(order, file.name);
+                            if (!shouldProcess) {
+                                // User chose to skip this order
+                                continue;
+                            }
+                        }
+                        
                         // Apply decimal conversions to all products
                         order.products = order.products.map(product => {
                             // Store original quantity before conversion
@@ -1562,6 +1671,11 @@
                             order: order,
                             pdf: null // Will be loaded when viewed
                         });
+                        
+                        // Add PO number to processed set for this session
+                        if (poNumber) {
+                            processedPONumbers.add(poNumber);
+                        }
                     }
                 } catch (error) {
                     console.error(`Error processing ${file.name}:`, error);
@@ -1577,7 +1691,61 @@
             }, 1000);
         }
         
-        // Display PDF Viewer
+        // Show duplicate PO warning and get user decision
+        function showDuplicateWarning(order, filename) {
+            return new Promise((resolve) => {
+                // Hide processing section temporarily
+                document.getElementById('processingSection').style.display = 'none';
+                
+                // Create duplicate warning section
+                const duplicateSection = document.createElement('div');
+                duplicateSection.id = 'duplicateWarningSection';
+                duplicateSection.innerHTML = `
+                    <div class="duplicate-warning">
+                        <h3>⚠️ Duplicate Purchase Order Detected</h3>
+                        <p>The purchase order number <span class="po-highlight">${order.poNumber || 'Unknown'}</span> has already been processed.</p>
+                        <p><strong>File:</strong> ${filename}</p>
+                        <p><strong>Customer:</strong> ${order.customerName} (${order.customerCode})</p>
+                        <p><strong>Order Date:</strong> ${order.orderDate}</p>
+                        <p>Processing this order again may create duplicate entries in your system.</p>
+                        
+                        <div class="duplicate-actions">
+                            <button class="btn-skip" onclick="handleDuplicateChoice(false)">
+                                🚫 Skip This Order
+                            </button>
+                            <button class="btn-process-anyway" onclick="handleDuplicateChoice(true)">
+                                ⚠️ Process Anyway
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert after processing section
+                const processingSection = document.getElementById('processingSection');
+                processingSection.parentNode.insertBefore(duplicateSection, processingSection.nextSibling);
+                
+                // Store the resolve function globally so the buttons can access it
+                window.currentDuplicateResolve = resolve;
+            });
+        }
+        
+        // Handle user choice for duplicate order (global function)
+        window.handleDuplicateChoice = function(shouldProcess) {
+            // Remove the duplicate warning section
+            const duplicateSection = document.getElementById('duplicateWarningSection');
+            if (duplicateSection) {
+                duplicateSection.remove();
+            }
+            
+            // Show processing section again
+            document.getElementById('processingSection').style.display = 'block';
+            
+            // Resolve the promise with user's choice
+            if (window.currentDuplicateResolve) {
+                window.currentDuplicateResolve(shouldProcess);
+                window.currentDuplicateResolve = null;
+            }
+        };
         async function displayPDFViewer() {
             if (pdfFiles.length === 0) return;
             
@@ -2416,6 +2584,13 @@
             
             // Save order history to Firebase AFTER successful export
             await saveOrderHistory(processedOrders);
+            
+            // Update processed PO numbers for future duplicate detection
+            processedOrders.forEach(order => {
+                if (order.poNumber) {
+                    processedPONumbers.add(order.poNumber);
+                }
+            });
             
             // Show success message with conversion summary
             let successMessage = `✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}`;
