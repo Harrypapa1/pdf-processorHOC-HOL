@@ -474,49 +474,44 @@
         }
         
         /* Order Lists Styles */ 
-        .order-lists-section {
-            display: none;
-            margin: 30px 0;
-        }
-        
-        .processed-orders-list {
-            background: #fff3cd;
+        .approved-orders-list {
+            background: #e8f5e8;
             border-radius: 15px;
             padding: 25px;
-            margin-bottom: 20px;
-            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+            border-left: 4px solid #27ae60;
         }
         
-        .processed-orders-list h3 {
-            color: #856404;
+        .approved-orders-list h3 {
+            color: #27ae60;
             margin-bottom: 15px;
             font-size: 1.2rem;
         }
         
-        .order-item {
+        .approved-order-item {
             background: white;
             border-radius: 8px;
             padding: 15px;
             margin: 10px 0;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-left: 4px solid #27ae60;
         }
         
-        .order-item-info {
-            flex: 1;
-        }
-        
-        .order-item-title {
+        .approved-order-item .order-item-title {
+            color: #27ae60;
             font-weight: 600;
-            color: #2c3e50;
             margin-bottom: 5px;
         }
         
-        .order-item-details {
+        .approved-order-item .order-item-details {
             font-size: 0.85rem;
             color: #7f8c8d;
+        }
+        
+        .approved-order-item::after {
+            content: "✅";
+            float: right;
+            font-size: 1.2rem;
         }
         
         .approve-order-btn {
@@ -544,39 +539,6 @@
         .approve-order-btn.approved:hover {
             transform: none;
             box-shadow: none;
-        }
-        
-        .approved-orders-list {
-            background: #e8f5e8;
-            border-radius: 15px;
-            padding: 25px;
-            margin: 20px 0;
-            border-left: 4px solid #27ae60;
-        }
-        
-        .approved-orders-list h3 {
-            color: #27ae60;
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-        }
-        
-        .approved-order-item {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-left: 4px solid #27ae60;
-        }
-        
-        .approved-order-item .order-item-title {
-            color: #27ae60;
-        }
-        
-        .approved-order-item::after {
-            content: "✅";
-            float: right;
-            font-size: 1.2rem;
         }
         
         .editable-field {
@@ -978,16 +940,6 @@
                 flex-direction: column;
                 align-items: center;
             }
-            
-            .order-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            
-            .order-item .approve-order-btn {
-                align-self: flex-end;
-            }
         }
     </style>
 </head>
@@ -1152,17 +1104,6 @@
             
             <!-- Results Summary Section -->
             <div class="results-section" id="resultsSection">
-                <!-- Order Lists Section -->
-                <div class="order-lists-section" id="orderListsSection">
-                    <!-- Processed Orders (Pending Approval) -->
-                    <div class="processed-orders-list">
-                        <h3>📋 Processed Orders - Ready for Review</h3>
-                        <div id="processedOrdersList">
-                            <!-- Processed orders will be populated here -->
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Export Section -->
                 <div class="export-section">
                     <!-- Approve Current Order Button -->
@@ -1910,24 +1851,8 @@
             
             document.getElementById('pdfViewerSection').style.display = 'block';
             
-            // Create file tabs
-            const tabsContainer = document.getElementById('fileTabsContainer');
-            tabsContainer.innerHTML = '';
-            
-            pdfFiles.forEach((pdfFile, index) => {
-                const tab = document.createElement('button');
-                tab.className = `file-tab ${index === 0 ? 'active' : ''}`;
-                
-                // Check if this order is approved
-                const isApproved = approvedOrders.find(o => o.filename === pdfFile.order.filename);
-                if (isApproved) {
-                    tab.classList.add('approved');
-                }
-                
-                tab.textContent = pdfFile.file.name;
-                tab.onclick = () => switchToFile(index);
-                tabsContainer.appendChild(tab);
-            });
+            // Create file tabs using the same logic as refresh
+            refreshFileTabsAfterApproval();
             
             // Load first PDF
             currentFileIndex = 0;
@@ -2125,68 +2050,75 @@
         function approveCurrentOrder() {
             if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
                 const order = pdfFiles[currentFileIndex].order;
-                approveSpecificOrder(order.filename);
+                const filename = order.filename;
+                
+                // Check if already approved
+                if (approvedOrders.find(o => o.filename === filename)) {
+                    alert('This order is already approved!');
+                    return;
+                }
+                
+                // Add to approved orders
+                approvedOrders.push(order);
+                
+                // Remove from pdfFiles array
+                pdfFiles.splice(currentFileIndex, 1);
+                
+                // Update UI
+                updateApprovedOrdersList();
+                updateExportSection();
+                
+                // Handle file switching after removal
+                if (pdfFiles.length === 0) {
+                    // No more files to review
+                    document.getElementById('pdfViewerSection').style.display = 'none';
+                    updateApprovalUI();
+                    alert(`✅ Order ${order.poNumber || order.filename} approved!\n\nAll orders have been processed and are ready for export.`);
+                } else {
+                    // Switch to next available file
+                    if (currentFileIndex >= pdfFiles.length) {
+                        currentFileIndex = pdfFiles.length - 1;
+                    }
+                    
+                    // Refresh file tabs and load new current file
+                    refreshFileTabsAfterApproval();
+                    loadPDFForViewing(currentFileIndex);
+                    
+                    alert(`✅ Order ${order.poNumber || order.filename} approved and moved to export list!\n\n${pdfFiles.length} order${pdfFiles.length !== 1 ? 's' : ''} remaining to review.`);
+                }
             }
         }
         
-        // NEW: Approve specific order by filename
-        function approveSpecificOrder(filename) {
-            const order = processedOrders.find(o => o.filename === filename);
-            if (!order) {
-                alert('Order not found!');
+        // Refresh file tabs after approval (removes approved file tab)
+        function refreshFileTabsAfterApproval() {
+            const tabsContainer = document.getElementById('fileTabsContainer');
+            tabsContainer.innerHTML = '';
+            
+            if (pdfFiles.length === 0) {
+                tabsContainer.innerHTML = '<p style="color: #7f8c8d; text-align: center; padding: 20px;">All orders approved! ✅</p>';
                 return;
             }
             
-            // Check if already approved
-            if (approvedOrders.find(o => o.filename === filename)) {
-                alert('This order is already approved!');
-                return;
-            }
-            
-            // Add to approved orders
-            approvedOrders.push(order);
-            
-            // Update all UI elements
-            updateProcessedOrdersList();
-            updateApprovedOrdersList();
-            updateExportSection();
-            updateApprovalUI();
-            
-            // Update file tab to show approved status if this is the current order
-            if (currentFileIndex >= 0 && pdfFiles[currentFileIndex].order.filename === filename) {
-                const fileTabs = document.querySelectorAll('.file-tab');
-                if (fileTabs[currentFileIndex]) {
-                    fileTabs[currentFileIndex].classList.add('approved');
-                }
-            }
-            
-            alert(`✅ Order ${order.poNumber || order.filename} approved and moved to export list!`);
+            pdfFiles.forEach((pdfFile, index) => {
+                const tab = document.createElement('button');
+                tab.className = `file-tab ${index === currentFileIndex ? 'active' : ''}`;
+                tab.textContent = pdfFile.file.name;
+                tab.onclick = () => switchToFile(index);
+                tabsContainer.appendChild(tab);
+            });
         }
         
         function updateApprovalUI() {
             const approveBtn = document.getElementById('approveOrderBtn');
             
-            // Show button if we have processed orders
-            if (processedOrders.length > 0) {
+            // Show button if we have files to review
+            if (pdfFiles.length > 0) {
                 approveBtn.style.display = 'inline-block';
+                approveBtn.textContent = '✅ Approve Current Order';
+                approveBtn.classList.remove('approved');
+                approveBtn.disabled = false;
             } else {
                 approveBtn.style.display = 'none';
-                return;
-            }
-            
-            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
-                const order = pdfFiles[currentFileIndex].order;
-                const isApproved = approvedOrders.find(o => o.filename === order.filename);
-                
-                if (isApproved) {
-                    approveBtn.textContent = '✅ Already Approved';
-                    approveBtn.classList.add('approved');
-                    approveBtn.disabled = true;
-                } else {
-                    approveBtn.textContent = '✅ Approve Current Order';
-                    approveBtn.classList.remove('approved');
-                    approveBtn.disabled = false;
-                }
             }
         }
         
@@ -2197,16 +2129,21 @@
             const approvedCount = approvedOrders.length;
             const totalValue = approvedOrders.reduce((sum, order) => sum + order.total, 0);
             const totalProducts = approvedOrders.reduce((sum, order) => sum + order.products.length, 0);
+            const remainingCount = pdfFiles.length;
             
             if (approvedCount === 0) {
                 exportSummary.textContent = 'No orders approved for export yet - approve orders one by one to include them in export';
                 exportBtn.style.display = 'none';
             } else {
-                exportSummary.innerHTML = `
-                    <strong>${approvedCount}</strong> order${approvedCount !== 1 ? 's' : ''} approved<br>
-                    <strong>${totalProducts}</strong> products • <strong>£${totalValue.toFixed(2)}</strong> total value<br>
-                    Ready for Freshware import
-                `;
+                let summaryText = `<strong>${approvedCount}</strong> order${approvedCount !== 1 ? 's' : ''} approved<br>`;
+                summaryText += `<strong>${totalProducts}</strong> products • <strong>£${totalValue.toFixed(2)}</strong> total value<br>`;
+                
+                if (remainingCount > 0) {
+                    summaryText += `<em>${remainingCount} order${remainingCount !== 1 ? 's' : ''} still pending approval</em><br>`;
+                }
+                
+                summaryText += 'Ready for Freshware import';
+                exportSummary.innerHTML = summaryText;
                 exportBtn.style.display = 'inline-block';
             }
         }
@@ -2656,54 +2593,11 @@
         // Display processing results
         function displayResults() {
             const resultsSection = document.getElementById('resultsSection');
-            const orderListsSection = document.getElementById('orderListsSection');
-            
-            // Show order lists if we have processed orders
-            if (processedOrders.length > 0) {
-                orderListsSection.style.display = 'block';
-                updateProcessedOrdersList();
-            }
             
             // Update export section
             updateExportSection();
             
             resultsSection.style.display = 'block';
-        }
-        
-        // Update processed orders list
-        function updateProcessedOrdersList() {
-            const processedOrdersList = document.getElementById('processedOrdersList');
-            
-            // Get orders that haven't been approved yet
-            const unapprovedOrders = processedOrders.filter(order => 
-                !approvedOrders.find(approved => approved.filename === order.filename)
-            );
-            
-            if (unapprovedOrders.length === 0) {
-                processedOrdersList.innerHTML = '<p style="color: #7f8c8d; text-align: center; padding: 20px;">All orders have been approved ✅</p>';
-                return;
-            }
-            
-            processedOrdersList.innerHTML = '';
-            unapprovedOrders.forEach(order => {
-                const orderItem = document.createElement('div');
-                orderItem.className = 'order-item';
-                orderItem.innerHTML = `
-                    <div class="order-item-info">
-                        <div class="order-item-title">📄 ${order.filename}</div>
-                        <div class="order-item-details">
-                            <strong>PO:</strong> ${order.poNumber || 'Not specified'} • 
-                            <strong>Customer:</strong> ${order.customerName} (${order.customerCode}) • 
-                            <strong>Products:</strong> ${order.products.length} • 
-                            <strong>Total:</strong> £${order.total.toFixed(2)}
-                        </div>
-                    </div>
-                    <button class="approve-order-btn" onclick="approveSpecificOrder('${order.filename}')">
-                        ✅ Approve
-                    </button>
-                `;
-                processedOrdersList.appendChild(orderItem);
-            });
         }
         
         // Update approved orders list
@@ -2723,7 +2617,7 @@
                 const orderItem = document.createElement('div');
                 orderItem.className = 'approved-order-item';
                 orderItem.innerHTML = `
-                    <div class="order-item-info">
+                    <div>
                         <div class="order-item-title">📄 ${order.filename}</div>
                         <div class="order-item-details">
                             <strong>PO:</strong> ${order.poNumber || 'Not specified'} • 
@@ -2960,7 +2854,6 @@
         
         // Global function assignments
         window.approveCurrentOrder = approveCurrentOrder;
-        window.approveSpecificOrder = approveSpecificOrder;
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', init);
