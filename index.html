@@ -371,6 +371,35 @@
             border-color: #e3e8ef;
             background: white;
         }
+
+        /* Decimal Warning Styles */
+        .decimal-warning {
+            background: #ffebee !important;
+            border-left: 4px solid #f44336 !important;
+        }
+
+        .decimal-warning input {
+            color: #d32f2f !important;
+            font-weight: bold !important;
+        }
+
+        .conversion-note {
+            font-size: 0.7rem;
+            margin-top: 2px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .conversion-note.converted {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .conversion-note.warning {
+            background: #ffebee;
+            color: #d32f2f;
+            font-weight: bold;
+        }
         
         .save-changes-btn {
             background: #27ae60;
@@ -611,6 +640,49 @@
             margin-bottom: 15px;
             opacity: 0.5;
         }
+
+        /* Conversion Status Section */
+        .conversion-status {
+            background: #fff3cd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+
+        .conversion-status h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .conversion-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .conversion-stat {
+            text-align: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+        }
+
+        .conversion-stat .number {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #856404;
+        }
+
+        .conversion-stat.warning .number {
+            color: #d32f2f;
+        }
+
+        .conversion-stat.success .number {
+            color: #2e7d32;
+        }
         
         @media (max-width: 768px) {
             .viewer-container {
@@ -643,6 +715,10 @@
             .recent-orders-table td {
                 padding: 8px 10px;
             }
+
+            .conversion-stats {
+                grid-template-columns: 1fr 1fr;
+            }
         }
     </style>
 </head>
@@ -650,7 +726,7 @@
     <div class="container">
         <div class="header">
             <div class="nav-links">
-                <a href="/customer-email-management.html" class="nav-link">Manage Emails</a>
+                <a href="/customer-email-management.html" class="nav-link">Manage Settings</a>
                 <a href="/order-history.html" class="nav-link">Order History</a>
             </div>
             <h1>📧 Email Order Processing</h1>
@@ -673,9 +749,9 @@
 
             <!-- Information Section -->
             <div class="info-section">
-                <h3>🔧 Customer Email Setup Required</h3>
-                <p>Before processing orders, make sure customer email mappings are configured.</p>
-                <p>Click <a href="/customer-email-management.html">Manage Emails</a> to set up customer email addresses for order notifications.</p>
+                <h3>🔧 Setup Required</h3>
+                <p>Before processing orders, configure customer emails and product conversions.</p>
+                <p>Click <a href="/customer-email-management.html">Manage Settings</a> to set up customer email addresses and decimal quantity conversions.</p>
             </div>
             
             <!-- Processing Section -->
@@ -725,7 +801,8 @@
                                 </div>
                                 <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
                                     💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes<br>
-                                    📦 SKU suffixes: Case contains "kg" → +K, "box" → +B, otherwise → +E
+                                    📦 Decimal quantities are automatically converted using your product settings<br>
+                                    🔴 Red highlighting indicates problematic decimals that need attention
                                 </div>
                             </div>
                             <div>
@@ -738,6 +815,26 @@
                                 <span class="changes-indicator" id="changesIndicator" style="display: none;">● Changes made</span>
                             </div>
                         </div>
+
+                        <!-- Conversion Status -->
+                        <div class="conversion-status" id="conversionStatus" style="display: none;">
+                            <h4>🧮 Decimal Quantity Conversions</h4>
+                            <div class="conversion-stats" id="conversionStats">
+                                <div class="conversion-stat success">
+                                    <div class="number" id="convertedCount">0</div>
+                                    <div>Converted</div>
+                                </div>
+                                <div class="conversion-stat warning">
+                                    <div class="number" id="warningCount">0</div>
+                                    <div>Need Attention</div>
+                                </div>
+                                <div class="conversion-stat">
+                                    <div class="number" id="wholeCount">0</div>
+                                    <div>Whole Numbers</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="extracted-data-body">
                             <table class="products-table" id="productsTable">
                                 <thead>
@@ -850,6 +947,7 @@
         let customerMappings = new Map();
         let productMappings = new Map();
         let emailMappingsCache = new Map();
+        let productConversionsCache = new Map(); // NEW: Store product conversions
         let lastCacheUpdate = 0;
         const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -864,6 +962,13 @@
         // Edit mode variables
         let isEditMode = false;
         let hasUnsavedChanges = false;
+
+        // Conversion tracking
+        let conversionStats = {
+            converted: 0,
+            warnings: 0,
+            whole: 0
+        };
 
         // Vendor mappings by product type
         let vendorMappings = new Map();
@@ -885,19 +990,146 @@
             return vendorMappings.get(productCode) || 'Osolocal2U';
         }
 
-        // Get SKU suffix based on case size for Freshware
-        function getSKUSuffix(caseSize) {
+        // Load product conversions from Firebase
+        async function loadProductConversionsFromFirestore() {
+            try {
+                console.log('Loading product conversions from Firestore...');
+                
+                const snapshot = await db.collection('productConversions').get();
+                
+                productConversionsCache.clear();
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    productConversionsCache.set(data.productCode, {
+                        name: data.productName || '',
+                        eachWeight: data.eachWeight
+                    });
+                });
+                
+                console.log(`Loaded ${productConversionsCache.size} product conversions`);
+                return productConversionsCache;
+            } catch (error) {
+                console.error('Error loading product conversions:', error);
+                return productConversionsCache;
+            }
+        }
+
+        // Check if quantity is decimal
+        function isDecimalQuantity(quantity) {
+            return quantity % 1 !== 0;
+        }
+
+        // Convert decimal quantities to whole numbers using product conversions
+        function convertDecimalQuantity(product) {
+            const originalQty = product.originalQuantity || product.quantity;
+            const productCode = product.productCode;
+            
+            // Reset conversion data
+            product.conversionApplied = false;
+            product.conversionNote = '';
+            product.hasWarning = false;
+            
+            // If quantity is whole number, no conversion needed
+            if (!isDecimalQuantity(originalQty)) {
+                product.quantity = originalQty;
+                product.conversionNote = '';
+                return product;
+            }
+            
+            // Check if product has conversion settings
+            const conversion = productConversionsCache.get(productCode);
+            
+            if (!conversion) {
+                // No conversion available - flag as warning
+                product.quantity = originalQty;
+                product.hasWarning = true;
+                product.conversionNote = `⚠️ ${originalQty}kg may round incorrectly in Freshware`;
+                return product;
+            }
+            
+            // Calculate conversion: kg to "each" units
+            const kgToGrams = originalQty * 1000;
+            const eachUnits = kgToGrams / conversion.eachWeight;
+            
+            // Check if conversion results in whole number
+            if (isDecimalQuantity(eachUnits)) {
+                // Still decimal after conversion - flag as warning
+                product.quantity = originalQty;
+                product.hasWarning = true;
+                product.conversionNote = `⚠️ ${originalQty}kg → ${eachUnits} ${productCode}E (still decimal)`;
+                return product;
+            }
+            
+            // Successful conversion to whole number
+            product.quantity = eachUnits;
+            product.conversionApplied = true;
+            product.conversionNote = `✅ ${originalQty}kg → ${eachUnits} ${productCode}E (${conversion.eachWeight}g each)`;
+            
+            // Recalculate prices based on new quantity
+            product.netPrice = product.quantity * product.unitPrice;
+            
+            return product;
+        }
+
+        // Get SKU suffix with conversion logic
+        function getSKUSuffix(product) {
+            const caseSize = product.caseSize;
+            const productCode = product.productCode;
+            
+            // If conversion was applied, always use E suffix
+            if (product.conversionApplied) {
+                return 'E';
+            }
+            
             if (!caseSize) return 'E'; // Default to EACH if no case size
             
             const caseLower = caseSize.toLowerCase();
             
             if (caseLower.includes('kg') || caseLower.includes('kilo')) {
+                // Check if this product should avoid K suffix due to decimals
+                const hasConversion = productConversionsCache.has(productCode);
+                const isDecimal = isDecimalQuantity(product.originalQuantity || product.quantity);
+                
+                if (hasConversion && isDecimal) {
+                    // This should have been converted, but if we're here something went wrong
+                    return 'E';
+                }
                 return 'K';
             } else if (caseLower.includes('box') || caseLower.includes('bx')) {
                 return 'B';
             } else {
-                return 'E'; // Default to EACH for everything else (including "each", "1x", etc.)
+                return 'E'; // Default to EACH for everything else
             }
+        }
+
+        // Update conversion statistics
+        function updateConversionStats() {
+            conversionStats = { converted: 0, warnings: 0, whole: 0 };
+            
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                
+                order.products.forEach(product => {
+                    const originalQty = product.originalQuantity || product.quantity;
+                    
+                    if (!isDecimalQuantity(originalQty)) {
+                        conversionStats.whole++;
+                    } else if (product.conversionApplied) {
+                        conversionStats.converted++;
+                    } else {
+                        conversionStats.warnings++;
+                    }
+                });
+            }
+            
+            // Update display
+            document.getElementById('convertedCount').textContent = conversionStats.converted;
+            document.getElementById('warningCount').textContent = conversionStats.warnings;
+            document.getElementById('wholeCount').textContent = conversionStats.whole;
+            
+            // Show/hide conversion status section
+            const hasDecimals = conversionStats.converted > 0 || conversionStats.warnings > 0;
+            document.getElementById('conversionStatus').style.display = hasDecimals ? 'block' : 'none';
         }
 
         // Firebase Functions
@@ -932,6 +1164,7 @@
         async function getCustomerEmail(customerCode, customerName) {
             if (Date.now() - lastCacheUpdate > CACHE_DURATION) {
                 await loadCustomerEmailsFromFirestore();
+                await loadProductConversionsFromFirestore();
             }
             
             // Try exact match first, then uppercase versions
@@ -972,7 +1205,11 @@
                         originalFileName: order.filename || '',
                         
                         // Products summary (for reference)
-                        productCodes: order.products.map(p => p.productCode).join(', ')
+                        productCodes: order.products.map(p => p.productCode).join(', '),
+                        
+                        // Conversion statistics
+                        conversionsApplied: order.products.filter(p => p.conversionApplied).length,
+                        warningsGenerated: order.products.filter(p => p.hasWarning).length
                     };
                     
                     // Create document with auto-generated ID
@@ -1106,8 +1343,9 @@
             // Initialize vendor mappings
             initializeVendorMappings();
 
-            // Load email mappings from Firestore
+            // Load email mappings and product conversions from Firestore
             await loadCustomerEmailsFromFirestore();
+            await loadProductConversionsFromFirestore();
         }
         
         // Initialize the application
@@ -1198,6 +1436,16 @@
                 try {
                     const order = await processPDF(file);
                     if (order) {
+                        // Apply decimal conversions to all products
+                        order.products = order.products.map(product => {
+                            // Store original quantity before conversion
+                            product.originalQuantity = product.quantity;
+                            return convertDecimalQuantity(product);
+                        });
+                        
+                        // Recalculate order total after conversions
+                        order.total = order.products.reduce((sum, product) => sum + product.netPrice, 0);
+                        
                         processedOrders.push(order);
                         pdfFiles.push({
                             file: file,
@@ -1379,12 +1627,19 @@
                 `;
             } else {
                 order.products.forEach((product, index) => {
-                    const skuWithSuffix = product.productCode + getSKUSuffix(product.caseSize);
+                    const skuWithSuffix = product.productCode + getSKUSuffix(product);
                     const row = document.createElement('tr');
+                    
+                    // Add warning class if product has issues
+                    if (product.hasWarning) {
+                        row.classList.add('decimal-warning');
+                    }
+                    
                     row.innerHTML = `
                         <td class="editable-cell">
                             <input type="number" step="0.1" value="${product.quantity}" 
                                    onchange="updateProductField(${index}, 'quantity', this.value)" />
+                            ${product.conversionNote ? `<div class="conversion-note ${product.conversionApplied ? 'converted' : 'warning'}">${product.conversionNote}</div>` : ''}
                         </td>
                         <td>${product.description}</td>
                         <td class="editable-cell">
@@ -1402,6 +1657,9 @@
                     tbody.appendChild(row);
                 });
             }
+            
+            // Update conversion statistics
+            updateConversionStats();
             
             // Reset edit mode
             isEditMode = false;
@@ -1492,27 +1750,31 @@
             if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
                 const order = pdfFiles[currentFileIndex].order;
                 if (productIndex >= 0 && productIndex < order.products.length) {
+                    const product = order.products[productIndex];
+                    
                     if (field === 'quantity') {
                         const newQuantity = parseFloat(value) || 0;
-                        order.products[productIndex].quantity = newQuantity;
-                        // Recalculate net price
-                        order.products[productIndex].netPrice = newQuantity * order.products[productIndex].unitPrice;
                         
-                        // Update the net price display immediately
-                        const row = document.querySelector(`#productsTableBody tr:nth-child(${productIndex + 1})`);
-                        if (row) {
-                            const netCell = row.querySelector('td:last-child');
-                            if (netCell) {
-                                netCell.textContent = `£${order.products[productIndex].netPrice.toFixed(2)}`;
-                            }
-                        }
+                        // Update the quantity and reapply conversion logic
+                        product.originalQuantity = newQuantity;
+                        const convertedProduct = convertDecimalQuantity(product);
+                        
+                        // Update the product in the order
+                        order.products[productIndex] = convertedProduct;
                         
                         // Recalculate order total
                         order.total = order.products.reduce((sum, product) => sum + product.netPrice, 0);
                         document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
                         
+                        // Refresh the display to show new conversion status
+                        updateExtractedDataDisplay(order);
+                        
                     } else if (field === 'productCode') {
-                        order.products[productIndex].productCode = value.toUpperCase();
+                        product.productCode = value.toUpperCase();
+                        
+                        // Reapply conversion logic with new product code
+                        const convertedProduct = convertDecimalQuantity(product);
+                        order.products[productIndex] = convertedProduct;
                         
                         // Update the export SKU display immediately
                         const row = document.querySelector(`#productsTableBody tr:nth-child(${productIndex + 1})`);
@@ -1521,11 +1783,14 @@
                             if (skuCell) {
                                 const exportDiv = skuCell.querySelector('div');
                                 if (exportDiv) {
-                                    const skuWithSuffix = order.products[productIndex].productCode + getSKUSuffix(order.products[productIndex].caseSize);
+                                    const skuWithSuffix = convertedProduct.productCode + getSKUSuffix(convertedProduct);
                                     exportDiv.textContent = `Export: ${skuWithSuffix}`;
                                 }
                             }
                         }
+                        
+                        // Update conversion statistics
+                        updateConversionStats();
                     }
                     
                     // Update processed orders array
@@ -1802,6 +2067,19 @@
                 }
             }
             
+            // Check for decimal warnings across all orders
+            let totalWarnings = 0;
+            let warningDetails = [];
+            
+            processedOrders.forEach(order => {
+                order.products.forEach(product => {
+                    if (product.hasWarning) {
+                        totalWarnings++;
+                        warningDetails.push(`${product.productCode} (${product.originalQuantity}kg) in ${order.filename}`);
+                    }
+                });
+            });
+            
             // If any emails are missing, show alert and stop export
             if (missingEmails.length > 0) {
                 let alertMessage = '❌ Cannot export! Missing customer email mappings:\n\n';
@@ -1811,13 +2089,36 @@
                 });
                 
                 alertMessage += '\n🔧 Please add these email mappings first:\n';
-                alertMessage += '1. Click "Manage Emails" in the top right\n';
+                alertMessage += '1. Click "Manage Settings" in the top right\n';
                 alertMessage += '2. Add the missing customer emails\n';
                 alertMessage += '3. Return here and export again\n\n';
                 alertMessage += 'Export cancelled - no file was created.';
                 
                 alert(alertMessage);
                 return; // Stop the export process
+            }
+            
+            // Show warning about problematic decimals if any exist
+            if (totalWarnings > 0) {
+                let warningMessage = `⚠️ Warning: ${totalWarnings} product(s) have decimal quantities that may cause rounding issues in Freshware:\n\n`;
+                
+                warningDetails.slice(0, 5).forEach(detail => {
+                    warningMessage += `• ${detail}\n`;
+                });
+                
+                if (warningDetails.length > 5) {
+                    warningMessage += `• ... and ${warningDetails.length - 5} more\n`;
+                }
+                
+                warningMessage += '\n💡 To fix these issues:\n';
+                warningMessage += '1. Go to "Manage Settings" → "Product Conversions"\n';
+                warningMessage += '2. Add conversion settings for these products\n';
+                warningMessage += '3. Re-upload the PDFs to apply conversions\n\n';
+                warningMessage += 'Continue with export anyway?';
+                
+                if (!confirm(warningMessage)) {
+                    return; // Stop export if user chooses not to continue
+                }
             }
             
             const wb = XLSX.utils.book_new();
@@ -1901,10 +2202,10 @@
                     
                     // Line item data - appears on ALL rows
                     row[15] = `${order.orderDate.split('/').reverse().join('-')} 20:29:32 +0100`; // Created at
-                    row[16] = product.quantity; // Lineitem quantity
+                    row[16] = product.quantity; // Lineitem quantity (converted if applicable)
                     row[17] = product.description; // Lineitem name
                     row[18] = product.unitPrice; // Lineitem price
-                    row[20] = product.productCode + getSKUSuffix(product.caseSize); // Lineitem sku with suffix
+                    row[20] = product.productCode + getSKUSuffix(product); // Lineitem sku with suffix
                     row[21] = "TRUE"; // Lineitem requires shipping
                     row[22] = "FALSE"; // Lineitem taxable
                     row[23] = "fulfilled"; // Lineitem fulfillment status
@@ -1936,8 +2237,24 @@
             // Save order history to Firebase AFTER successful export
             await saveOrderHistory(processedOrders);
             
-            // Show success message
-            alert(`✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}\n\nReady for Freshware import!`);
+            // Show success message with conversion summary
+            let successMessage = `✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}`;
+            
+            // Add conversion summary if there were conversions
+            const totalConverted = processedOrders.reduce((sum, order) => 
+                sum + order.products.filter(p => p.conversionApplied).length, 0);
+            
+            if (totalConverted > 0) {
+                successMessage += `\n\nDecimal Conversions Applied: ${totalConverted}`;
+            }
+            
+            if (totalWarnings > 0) {
+                successMessage += `\nWarnings: ${totalWarnings} (may need attention)`;
+            }
+            
+            successMessage += '\n\nReady for Freshware import!';
+            
+            alert(successMessage);
         }
         
         // Initialize when page loads
