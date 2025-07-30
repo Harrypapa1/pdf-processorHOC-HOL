@@ -1086,14 +1086,21 @@
             
             // Successful conversion to whole number
             const wholeEachUnits = Math.round(roundedEachUnits);
+            
+            // Calculate the correct net price FIRST (based on original quantity and original unit price)
+            const correctNetPrice = originalQty * product.unitPrice;
+            
+            // Now calculate the new unit price per "each"
+            const newUnitPrice = correctNetPrice / wholeEachUnits;
+            
+            // Update product with converted values
             product.quantity = wholeEachUnits;
+            product.unitPrice = newUnitPrice;
+            product.netPrice = correctNetPrice; // This stays the same as original calculation
             product.conversionApplied = true;
             product.conversionNote = `✅ ${originalQty}kg → ${wholeEachUnits} ${productCode}E (${conversion.eachWeight}g each)`;
             
-            // Recalculate prices based on new quantity
-            product.netPrice = product.quantity * product.unitPrice;
-            
-            console.log(`${productCode}: Successfully converted to ${wholeEachUnits} units`);
+            console.log(`${productCode}: Successfully converted to ${wholeEachUnits} units at £${newUnitPrice.toFixed(2)} each`);
             return product;
         }
 
@@ -1784,8 +1791,13 @@
                     if (field === 'quantity') {
                         const newQuantity = parseFloat(value) || 0;
                         
+                        // Store the original unit price before conversion
+                        const originalUnitPrice = product.originalUnitPrice || product.unitPrice;
+                        
                         // Update the quantity and reapply conversion logic
                         product.originalQuantity = newQuantity;
+                        product.originalUnitPrice = originalUnitPrice;
+                        
                         const convertedProduct = convertDecimalQuantity(product);
                         
                         // Update the product in the order
