@@ -641,33 +641,6 @@
             margin: 30px 0;
         }
         
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #667eea;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            color: #7f8c8d;
-            font-size: 0.9rem;
-        }
-        
         .export-section {
             background: #e8f5e8;
             border-radius: 15px;
@@ -706,13 +679,50 @@
             text-overflow: ellipsis;
         }
         
-        .file-tab.active {
-            background: #667eea;
+        .file-tab.approved {
+            background: #27ae60;
             color: white;
+            position: relative;
+        }
+        
+        .file-tab.approved::after {
+            content: "✅";
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
         }
         
         .file-tab:hover {
             transform: translateY(-2px);
+        }
+        
+        .approve-order-btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 15px 10px;
+        }
+        
+        .approve-order-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        .approve-order-btn.approved {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .approve-order-btn.approved:hover {
+            transform: none;
+            box-shadow: none;
         }
 
 
@@ -979,6 +989,9 @@
                                 <button class="edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()">
                                     ✏️ Edit Data
                                 </button>
+                                <button class="approve-order-btn" id="approveOrderBtn" onclick="approveCurrentOrder()">
+                                    ✅ Approve Order
+                                </button>
                                 <button class="save-changes-btn" id="saveChangesBtn" onclick="saveChanges()" style="display: none;">
                                     💾 Save Changes
                                 </button>
@@ -1078,6 +1091,7 @@
 
         // Global variables
         let processedOrders = [];
+        let approvedOrders = []; // Track individually approved orders
         let customerMappings = new Map();
         let productMappings = new Map();
         let emailMappingsCache = new Map();
@@ -1663,6 +1677,7 @@
             
             // Clear current session but keep historical PO numbers for duplicate detection
             processedOrders = [];
+            approvedOrders = []; // Reset approved orders for new batch
             pdfFiles = [];
             
             for (let i = 0; i < files.length; i++) {
@@ -1786,6 +1801,13 @@
             pdfFiles.forEach((pdfFile, index) => {
                 const tab = document.createElement('button');
                 tab.className = `file-tab ${index === 0 ? 'active' : ''}`;
+                
+                // Check if this order is approved
+                const isApproved = approvedOrders.find(o => o.filename === pdfFile.order.filename);
+                if (isApproved) {
+                    tab.classList.add('approved');
+                }
+                
                 tab.textContent = pdfFile.file.name;
                 tab.onclick = () => switchToFile(index);
                 tabsContainer.appendChild(tab);
@@ -1813,6 +1835,15 @@
             // Update active tab
             document.querySelectorAll('.file-tab').forEach((tab, i) => {
                 tab.classList.toggle('active', i === index);
+                
+                // Maintain approval status when switching
+                const order = pdfFiles[i].order;
+                const isApproved = approvedOrders.find(o => o.filename === order.filename);
+                if (isApproved) {
+                    tab.classList.add('approved');
+                } else {
+                    tab.classList.remove('approved');
+                }
             });
             
             currentFileIndex = index;
@@ -1846,13 +1877,84 @@
                 // Render first page
                 await renderPage(1);
                 
-                // Update extracted data display
+                // Approve current order
+        function approveCurrentOrder() {
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                
+                // Check if already approved
+                if (approvedOrders.find(o => o.filename === order.filename)) {
+                    alert('This order is already approved!');
+                    return;
+                }
+                
+                // Add to approved orders
+                approvedOrders.push(order);
+                
+                // Update UI
+                updateApprovalUI();
+                updateExportSection();
+                
+                // Update file tab to show approved status
+                const fileTabs = document.querySelectorAll('.file-tab');
+                if (fileTabs[currentFileIndex]) {
+                    fileTabs[currentFileIndex].classList.add('approved');
+                }
+                
+                alert(`✅ Order ${order.poNumber || order.filename} approved!`);
+            }
+        }
+        
+        // Update approval UI
+        function updateApprovalUI() {
+            const approveBtn = document.getElementById('approveOrderBtn');
+            
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                const isApproved = approvedOrders.find(o => o.filename === order.filename);
+                
+                if (isApproved) {
+                    approveBtn.textContent = '✅ Approved';
+                    approveBtn.classList.add('approved');
+                    approveBtn.disabled = true;
+                } else {
+                    approveBtn.textContent = '✅ Approve Order';
+                    approveBtn.classList.remove('approved');
+                    approveBtn.disabled = false;
+                }
+            }
+        }
+        
+        // Update export section
+        function updateExportSection() {
+            const exportSummary = document.getElementById('exportSummary');
+            const exportBtn = document.getElementById('exportBtn');
+            
+            const approvedCount = approvedOrders.length;
+            const totalValue = approvedOrders.reduce((sum, order) => sum + order.total, 0);
+            const totalProducts = approvedOrders.reduce((sum, order) => sum + order.products.length, 0);
+            
+            if (approvedCount === 0) {
+                exportSummary.textContent = 'No orders approved yet - approve orders one by one to include them in export';
+                exportBtn.style.display = 'none';
+            } else {
+                exportSummary.innerHTML = `
+                    <strong>${approvedCount}</strong> order${approvedCount !== 1 ? 's' : ''} approved<br>
+                    <strong>${totalProducts}</strong> products • <strong>£${totalValue.toFixed(2)}</strong> total value<br>
+                    Ready for Freshware import
+                `;
+                exportBtn.style.display = 'inline-block';
+            }
+        }
                 updateExtractedDataDisplay(pdfFile.order);
                 
                 // Reset edit mode for new file
                 isEditMode = false;
                 hasUnsavedChanges = false;
                 updateEditModeUI();
+                
+                // Update approval UI for this file
+                updateApprovalUI();
                 
             } catch (error) {
                 console.error('Error loading PDF for viewing:', error);
@@ -1973,7 +2075,11 @@
             // Update order summary
             document.getElementById('orderType').textContent = order.type;
             document.getElementById('orderPO').value = order.poNumber || '';
-            document.getElementById('orderCustomer').textContent = `${order.customerName} (${order.customerCode})`;
+            
+            // Show approval status in customer display
+            const isApproved = approvedOrders.find(o => o.filename === order.filename);
+            const approvalStatus = isApproved ? ' ✅ APPROVED' : '';
+            document.getElementById('orderCustomer').textContent = `${order.customerName} (${order.customerCode})${approvalStatus}`;
             
             // Convert dates from DD/MM/YYYY to YYYY-MM-DD for date inputs
             document.getElementById('orderDate').value = convertDateForInput(order.orderDate);
@@ -2415,24 +2521,26 @@
         function displayResults() {
             const resultsSection = document.getElementById('resultsSection');
             
-            // Update stats
-            const totalProducts = processedOrders.reduce((sum, order) => sum + order.products.length, 0);
-            const totalValue = processedOrders.reduce((sum, order) => sum + order.total, 0);
-            
-            document.getElementById('totalOrders').textContent = processedOrders.length;
-            document.getElementById('totalProducts').textContent = totalProducts;
-            document.getElementById('mappedProducts').textContent = totalProducts;
-            document.getElementById('totalValue').textContent = '£' + totalValue.toFixed(2);
+            // Update export section
+            updateExportSection();
             
             resultsSection.style.display = 'block';
         }
         
         // Export to Excel in Freshware format with email lookup
         async function exportToExcel() {
+            // Only export approved orders
+            const ordersToExport = approvedOrders;
+            
+            if (ordersToExport.length === 0) {
+                alert('❌ No orders approved for export!\n\nPlease approve at least one order before exporting.');
+                return;
+            }
+            
             // First, validate that all customers have email mappings
             const missingEmails = [];
             
-            for (const order of processedOrders) {
+            for (const order of ordersToExport) {
                 const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
                 if (!customerEmail || customerEmail.trim() === '') {
                     missingEmails.push({
@@ -2443,11 +2551,11 @@
                 }
             }
             
-            // Check for decimal warnings across all orders
+            // Check for decimal warnings across approved orders
             let totalWarnings = 0;
             let warningDetails = [];
             
-            processedOrders.forEach(order => {
+            ordersToExport.forEach(order => {
                 order.products.forEach(product => {
                     if (product.hasWarning) {
                         totalWarnings++;
@@ -2521,7 +2629,7 @@
             wsData.push(headers);
             
             // Add data rows with email lookup
-            for (const order of processedOrders) {
+            for (const order of ordersToExport) {
                 // Get customer email from Firebase
                 const customerEmail = await getCustomerEmail(order.customerCode, order.customerName);
                 
@@ -2611,20 +2719,20 @@
             XLSX.writeFile(wb, filename);
             
             // Save order history to Firebase AFTER successful export
-            await saveOrderHistory(processedOrders);
+            await saveOrderHistory(ordersToExport);
             
             // Update processed PO numbers for future duplicate detection
-            processedOrders.forEach(order => {
+            ordersToExport.forEach(order => {
                 if (order.poNumber) {
                     processedPONumbers.add(order.poNumber);
                 }
             });
             
             // Show success message with conversion summary
-            let successMessage = `✅ Export successful!\n\nFile: ${filename}\nOrders: ${processedOrders.length}\nTotal Products: ${processedOrders.reduce((sum, order) => sum + order.products.length, 0)}`;
+            let successMessage = `✅ Export successful!\n\nFile: ${filename}\nApproved Orders: ${ordersToExport.length}\nTotal Products: ${ordersToExport.reduce((sum, order) => sum + order.products.length, 0)}`;
             
             // Add conversion summary if there were conversions
-            const totalConverted = processedOrders.reduce((sum, order) => 
+            const totalConverted = ordersToExport.reduce((sum, order) => 
                 sum + order.products.filter(p => p.conversionApplied).length, 0);
             
             if (totalConverted > 0) {
@@ -2639,6 +2747,9 @@
             
             alert(successMessage);
         }
+        
+        // Global functions for HTML onclick attributes
+        window.approveCurrentOrder = approveCurrentOrder;
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', init);
