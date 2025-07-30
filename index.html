@@ -849,9 +849,10 @@
                                     <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
                                 </div>
                                 <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
-                                    💡 Click "Edit Data" to modify PO number, dates, quantities, and SKU codes<br>
+                                    💡 Click "Edit Data" to modify PO number, dates, quantities, SKU codes, and case sizes<br>
                                     📦 Decimal quantities are automatically converted using your product settings<br>
-                                    🔴 Red highlighting indicates problematic decimals that need attention
+                                    🔴 Red highlighting indicates problematic decimals that need attention<br>
+                                    📋 Case sizes: Use "1xEach", "1xKg", or "1xBox" to control export SKU suffixes (E/K/B)
                                 </div>
                             </div>
                             <div>
@@ -891,7 +892,7 @@
                                         <th>Qty <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
                                         <th>Description</th>
                                         <th>SKU <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
-                                        <th>Case</th>
+                                        <th>Case <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
                                         <th>Unit £</th>
                                         <th>Net £</th>
                                     </tr>
@@ -1794,7 +1795,10 @@
                                    onchange="updateProductField(${index}, 'productCode', this.value)" 
                                    style="text-transform: uppercase;" />
                         </td>
-                        <td>${product.caseSize}</td>
+                        <td class="editable-cell">
+                            <input type="text" value="${product.caseSize}" 
+                                   onchange="updateProductField(${index}, 'caseSize', this.value)" />
+                        </td>
                         <td>£${product.unitPrice.toFixed(2)}</td>
                         <td>£${product.netPrice.toFixed(2)}</td>
                     `;
@@ -1929,6 +1933,11 @@
                         
                         // Update conversion statistics
                         updateConversionStats();
+                    } else if (field === 'caseSize') {
+                        product.caseSize = value;
+                        
+                        // The case size affects SKU suffix, so we need to update during export
+                        // No need to recalculate conversions, just store the new case size
                     }
                     
                     // Update processed orders array
