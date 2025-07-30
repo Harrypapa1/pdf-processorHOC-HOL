@@ -1877,7 +1877,174 @@
                 // Render first page
                 await renderPage(1);
                 
-                // Approve current order
+                // Convert date from DD/MM/YYYY to YYYY-MM-DD
+        function convertDateForInput(dateStr) {
+            if (!dateStr || dateStr === '') return '';
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+            }
+            return dateStr;
+        }
+        
+        // Convert date from YYYY-MM-DD to DD/MM/YYYY
+        function convertDateFromInput(dateStr) {
+            if (!dateStr || dateStr === '') return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return dateStr;
+        }
+        
+        // Toggle edit mode
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            updateEditModeUI();
+        }
+        
+        // Update UI based on edit mode
+        function updateEditModeUI() {
+            const editBtn = document.getElementById('editToggleBtn');
+            const saveBtn = document.getElementById('saveChangesBtn');
+            const changesIndicator = document.getElementById('changesIndicator');
+            const editableFields = document.querySelectorAll('.editable-field');
+            const editableCells = document.querySelectorAll('.editable-cell');
+            
+            if (isEditMode) {
+                editBtn.textContent = '👁️ View Mode';
+                editBtn.classList.add('editing');
+                saveBtn.style.display = hasUnsavedChanges ? 'inline-block' : 'none';
+                
+                // Enable editing
+                editableFields.forEach(field => {
+                    field.classList.add('editing');
+                    field.disabled = false;
+                });
+                
+                editableCells.forEach(cell => {
+                    cell.classList.add('editing');
+                    const input = cell.querySelector('input');
+                    const select = cell.querySelector('select');
+                    if (input) input.disabled = false;
+                    if (select) select.disabled = false;
+                });
+            } else {
+                editBtn.textContent = '✏️ Edit Data';
+                editBtn.classList.remove('editing');
+                saveBtn.style.display = 'none';
+                
+                // Disable editing
+                editableFields.forEach(field => {
+                    field.classList.remove('editing');
+                    field.disabled = true;
+                });
+                
+                editableCells.forEach(cell => {
+                    cell.classList.remove('editing');
+                    const input = cell.querySelector('input');
+                    const select = cell.querySelector('select');
+                    if (input) input.disabled = true;
+                    if (select) select.disabled = true;
+                });
+            }
+            
+            // Show/hide changes indicator
+            changesIndicator.style.display = hasUnsavedChanges ? 'inline' : 'none';
+        }
+        
+        // Mark as changed
+        function markAsChanged() {
+            hasUnsavedChanges = true;
+            updateEditModeUI();
+        }
+        
+        // Update product field
+        function updateProductField(productIndex, field, value) {
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                if (productIndex >= 0 && productIndex < order.products.length) {
+                    const product = order.products[productIndex];
+                    
+                    if (field === 'quantity') {
+                        const newQuantity = parseFloat(value) || 0;
+                        
+                        // Store the original unit price before conversion
+                        const originalUnitPrice = product.originalUnitPrice || product.unitPrice;
+                        
+                        // Update the quantity and reapply conversion logic
+                        product.originalQuantity = newQuantity;
+                        product.originalUnitPrice = originalUnitPrice;
+                        
+                        const convertedProduct = convertDecimalQuantity(product);
+                        
+                        // Update the product in the order
+                        order.products[productIndex] = convertedProduct;
+                        
+                        // Recalculate order total
+                        order.total = order.products.reduce((sum, product) => sum + product.netPrice, 0);
+                        document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
+                        
+                        // Refresh the display to show new conversion status
+                        updateExtractedDataDisplay(order);
+                        
+                    } else if (field === 'productCode') {
+                        product.productCode = value.toUpperCase();
+                        
+                        // Reapply conversion logic with new product code
+                        const convertedProduct = convertDecimalQuantity(product);
+                        order.products[productIndex] = convertedProduct;
+                        
+                        // Export SKU handling is done during export only
+                        
+                        // Update conversion statistics
+                        updateConversionStats();
+                    } else if (field === 'caseSize') {
+                        product.caseSize = value;
+                        
+                        // The case size affects SKU suffix, so we need to update during export
+                        // No need to recalculate conversions, just store the new case size
+                    }
+                    
+                    // Update processed orders array
+                    const processedOrderIndex = processedOrders.findIndex(o => o.filename === order.filename);
+                    if (processedOrderIndex >= 0) {
+                        processedOrders[processedOrderIndex] = order;
+                    }
+                    
+                    markAsChanged();
+                }
+            }
+        }
+        
+        // Save changes
+        function saveChanges() {
+            if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
+                const order = pdfFiles[currentFileIndex].order;
+                
+                // Update order data from form fields
+                order.poNumber = document.getElementById('orderPO').value;
+                order.orderDate = convertDateFromInput(document.getElementById('orderDate').value);
+                order.deliveryDate = convertDateFromInput(document.getElementById('deliveryDate').value);
+                
+                // Update processed orders array
+                const processedOrderIndex = processedOrders.findIndex(o => o.filename === order.filename);
+                if (processedOrderIndex >= 0) {
+                    processedOrders[processedOrderIndex] = order;
+                }
+                
+                // Update display with new data
+                updateExtractedDataDisplay(order);
+                
+                hasUnsavedChanges = false;
+                updateEditModeUI();
+                
+                alert('✅ Changes saved successfully!');
+                
+                // Update summary stats
+                displayResults();
+            }
+        }
         function approveCurrentOrder() {
             if (currentFileIndex >= 0 && currentFileIndex < pdfFiles.length) {
                 const order = pdfFiles[currentFileIndex].order;
@@ -2071,6 +2238,80 @@
         }
         
         // Update extracted data display
+        function updateExtractedDataDisplay(order) {
+            // Update order summary
+            document.getElementById('orderType').textContent = order.type;
+            document.getElementById('orderPO').value = order.poNumber || '';
+            
+            // Show approval status in customer display
+            const isApproved = approvedOrders.find(o => o.filename === order.filename);
+            const approvalStatus = isApproved ? ' ✅ APPROVED' : '';
+            document.getElementById('orderCustomer').textContent = `${order.customerName} (${order.customerCode})${approvalStatus}`;
+            
+            // Convert dates from DD/MM/YYYY to YYYY-MM-DD for date inputs
+            document.getElementById('orderDate').value = convertDateForInput(order.orderDate);
+            document.getElementById('deliveryDate').value = convertDateForInput(order.deliveryDate);
+            document.getElementById('orderTotal').textContent = `£${order.total.toFixed(2)}`;
+            
+            // Update products table
+            const tbody = document.getElementById('productsTableBody');
+            tbody.innerHTML = '';
+            
+            if (order.products.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            No products found in this order
+                        </td>
+                    </tr>
+                `;
+            } else {
+                order.products.forEach((product, index) => {
+                    const skuWithSuffix = product.productCode + getSKUSuffix(product);
+                    const row = document.createElement('tr');
+                    
+                    // Add styling based on conversion status
+                    if (product.hasWarning) {
+                        row.classList.add('decimal-warning');
+                    } else if (product.conversionApplied) {
+                        // Add green highlighting for successful conversions
+                        row.classList.add('conversion-success');
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="editable-cell">
+                            <input type="number" step="0.1" value="${product.quantity}" 
+                                   onchange="updateProductField(${index}, 'quantity', this.value)" />
+                            ${product.conversionNote ? `<div class="conversion-note ${product.conversionApplied ? 'converted' : 'warning'}">${product.conversionNote}</div>` : ''}
+                        </td>
+                        <td>${product.description}</td>
+                        <td class="editable-cell">
+                            <input type="text" value="${product.productCode}" 
+                                   onchange="updateProductField(${index}, 'productCode', this.value)" 
+                                   style="text-transform: uppercase;" />
+                        </td>
+                        <td class="editable-cell">
+                            <select onchange="updateProductField(${index}, 'caseSize', this.value)">
+                                <option value="Each" ${getCaseSizeType(product.caseSize) === 'Each' ? 'selected' : ''}>Each</option>
+                                <option value="Kilo" ${getCaseSizeType(product.caseSize) === 'Kilo' ? 'selected' : ''}>Kilo</option>
+                                <option value="Box" ${getCaseSizeType(product.caseSize) === 'Box' ? 'selected' : ''}>Box</option>
+                            </select>
+                        </td>
+                        <td>£${product.unitPrice.toFixed(2)}</td>
+                        <td>£${product.netPrice.toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            // Update conversion statistics
+            updateConversionStats();
+            
+            // Reset edit mode
+            isEditMode = false;
+            hasUnsavedChanges = false;
+            updateEditModeUI();
+        }
         function updateExtractedDataDisplay(order) {
             // Update order summary
             document.getElementById('orderType').textContent = order.type;
@@ -2517,7 +2758,207 @@
             document.getElementById('processingStatus').textContent = status;
         }
         
-        // Display processing results
+        // Real PDF processing with PDF.js
+        async function processPDF(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                const page = await pdf.getPage(1);
+                const textContent = await page.getTextContent();
+                
+                // Extract text from PDF
+                const text = textContent.items.map(item => item.str).join(' ');
+                
+                // Determine template type and parse
+                const isConsolidated = text.includes('Consolidated Purchase Order');
+                
+                if (isConsolidated) {
+                    return parseConsolidatedOrder(text, file.name);
+                } else {
+                    return parseStandardOrder(text, file.name);
+                }
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                throw error;
+            }
+        }
+        
+        // Parse consolidated order template
+        function parseConsolidatedOrder(text, filename) {
+            const order = {
+                filename: filename,
+                type: 'Consolidated',
+                customerCode: '',
+                customerName: '',
+                poNumber: '',
+                orderDate: '',
+                deliveryDate: '',
+                products: [],
+                total: 0
+            };
+            
+            // Extract PO Number
+            const poPatterns = [
+                /PO Number:\s*([A-Z0-9]+)/i,
+                /Purchase Order[^:]*:\s*([A-Z0-9]+)/i,
+                /PO[:\s]+([A-Z0-9]+)/i
+            ];
+            
+            for (const pattern of poPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.poNumber = match[1];
+                    break;
+                }
+            }
+            
+            // Extract dates
+            const orderDatePatterns = [
+                /Order Date:\s*(\d{2}\/\d{2}\/\d{4})/,
+                /Date:\s*(\d{2}\/\d{2}\/\d{4})/
+            ];
+            
+            for (const pattern of orderDatePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.orderDate = match[1];
+                    break;
+                }
+            }
+            
+            const deliveryDatePatterns = [
+                /Delivery Date:\s*(\d{2}\/\d{2}\/\d{4})/,
+                /Deliver[^:]*:\s*(\d{2}\/\d{2}\/\d{4})/
+            ];
+            
+            for (const pattern of deliveryDatePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.deliveryDate = match[1];
+                    break;
+                }
+            }
+            
+            // Extract customer info
+            const customerPatterns = [
+                /following outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
+                /outlets[^:]*:\s*([^(]+)\s*\(([^)]+)\)/i,
+                /The\s+([^(]+)\s*\(([^)]+)\)/i
+            ];
+            
+            for (const pattern of customerPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.customerName = match[1].trim();
+                    order.customerCode = match[2].trim();
+                    break;
+                }
+            }
+            
+            // Extract products
+            const productPatterns = [
+                /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x[A-Za-z]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g,
+                /(\d+\.?\d*)\s+([A-Z][A-Z\s]+?)\s+([A-Z]{2,5})\s+([^\d]+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g
+            ];
+            
+            for (const pattern of productPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    const product = {
+                        quantity: parseFloat(match[1]),
+                        description: match[2].trim(),
+                        productCode: match[3].trim(),
+                        caseSize: match[4].trim(),
+                        unitPrice: parseFloat(match[5]),
+                        netPrice: parseFloat(match[6])
+                    };
+                    
+                    if (product.quantity > 0 && product.productCode && product.unitPrice > 0) {
+                        order.products.push(product);
+                        order.total += product.netPrice;
+                    }
+                }
+                
+                if (order.products.length > 0) break;
+            }
+            
+            // Extract total if products parsing failed
+            if (order.total === 0) {
+                const totalPatterns = [
+                    /Net Total[:\s]+(\d+\.?\d*)/i,
+                    /Total[:\s]+(\d+\.?\d*)/i
+                ];
+                
+                for (const pattern of totalPatterns) {
+                    const match = text.match(pattern);
+                    if (match) {
+                        order.total = parseFloat(match[1]);
+                        break;
+                    }
+                }
+            }
+            
+            return order;
+        }
+        
+        // Parse standard order template  
+        function parseStandardOrder(text, filename) {
+            const order = {
+                filename: filename,
+                type: 'Standard',
+                customerCode: '',
+                customerName: '',
+                poNumber: '',
+                orderDate: '',
+                deliveryDate: '',
+                products: [],
+                total: 0
+            };
+            
+            // Extract PO Number
+            const poMatch = text.match(/PO Number:\s*([A-Z0-9]+)/);
+            if (poMatch) order.poNumber = poMatch[1];
+            
+            // Extract dates
+            const orderDateMatch = text.match(/Order Date:\s*(\d{2}\/\d{2}\/\d{4})/);
+            if (orderDateMatch) order.orderDate = orderDateMatch[1];
+            
+            const deliveryDateMatch = text.match(/Delivery Date:\s*(\d{2}\/\d{2}\/\d{4})/);
+            if (deliveryDateMatch) order.deliveryDate = deliveryDateMatch[1];
+            
+            // Extract customer code from Account No
+            const accountMatch = text.match(/Account No:\s*([A-Z0-9]+)/);
+            if (accountMatch) order.customerCode = accountMatch[1];
+            
+            // Extract customer name from Deliver To section
+            const deliverMatch = text.match(/Deliver To\s+([^\n]+)/);
+            if (deliverMatch) order.customerName = deliverMatch[1].trim();
+            
+            // Extract products table
+            const tablePattern = /(\d+\.?\d*)\s+([A-Z\s]+?)\s+([A-Z]+)\s+(1x\w+)\s+(\d+\.?\d*)\s+(\d+\.?\d*)/g;
+            let match;
+            
+            while ((match = tablePattern.exec(text)) !== null) {
+                const product = {
+                    quantity: parseFloat(match[1]),
+                    description: match[2].trim(),
+                    productCode: match[3].trim(),
+                    caseSize: match[4].trim(),
+                    unitPrice: parseFloat(match[5]),
+                    netPrice: parseFloat(match[6])
+                };
+                order.products.push(product);
+                order.total += product.netPrice;
+            }
+            
+            return order;
+        }
+        
+        // Update progress bar
+        function updateProgress(percent, status) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('processingStatus').textContent = status;
+        }
         function displayResults() {
             const resultsSection = document.getElementById('resultsSection');
             
@@ -2750,6 +3191,16 @@
         
         // Global functions for HTML onclick attributes
         window.approveCurrentOrder = approveCurrentOrder;
+        window.toggleEditMode = toggleEditMode;
+        window.saveChanges = saveChanges;
+        window.updateProductField = updateProductField;
+        window.markAsChanged = markAsChanged;
+        window.zoomIn = zoomIn;
+        window.zoomOut = zoomOut;
+        window.prevPage = prevPage;
+        window.nextPage = nextPage;
+        window.fitToWidth = fitToWidth;
+        window.exportToExcel = exportToExcel;
         
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', init);
