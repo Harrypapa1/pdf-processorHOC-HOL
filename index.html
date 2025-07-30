@@ -383,6 +383,17 @@
             font-weight: bold !important;
         }
 
+        /* Successful Conversion Styles */
+        .conversion-success {
+            background: #f0f8f0 !important;
+            border-left: 4px solid #2e7d32 !important;
+        }
+
+        .conversion-success input {
+            color: #2e7d32 !important;
+            font-weight: bold !important;
+        }
+
         .conversion-note {
             font-size: 0.7rem;
             margin-top: 2px;
@@ -1024,6 +1035,10 @@
             const originalQty = product.originalQuantity || product.quantity;
             const productCode = product.productCode;
             
+            // Debug logging
+            console.log(`Converting product: ${productCode}, qty: ${originalQty}kg`);
+            console.log(`Available conversions:`, Array.from(productConversionsCache.keys()));
+            
             // Reset conversion data
             product.conversionApplied = false;
             product.conversionNote = '';
@@ -1033,17 +1048,20 @@
             if (!isDecimalQuantity(originalQty)) {
                 product.quantity = originalQty;
                 product.conversionNote = '';
+                console.log(`${productCode}: Whole number, no conversion needed`);
                 return product;
             }
             
             // Check if product has conversion settings
             const conversion = productConversionsCache.get(productCode);
+            console.log(`${productCode} conversion found:`, conversion);
             
             if (!conversion) {
                 // No conversion available - flag as warning
                 product.quantity = originalQty;
                 product.hasWarning = true;
                 product.conversionNote = `⚠️ ${originalQty}kg may round incorrectly in Freshware`;
+                console.log(`${productCode}: No conversion available`);
                 return product;
             }
             
@@ -1051,23 +1069,31 @@
             const kgToGrams = originalQty * 1000;
             const eachUnits = kgToGrams / conversion.eachWeight;
             
-            // Check if conversion results in whole number
-            if (isDecimalQuantity(eachUnits)) {
+            // Round to avoid floating point precision issues
+            const roundedEachUnits = Math.round(eachUnits * 100) / 100;
+            
+            console.log(`${productCode}: ${originalQty}kg = ${kgToGrams}g ÷ ${conversion.eachWeight}g = ${eachUnits} units (rounded: ${roundedEachUnits})`);
+            
+            // Check if conversion results in whole number (or very close to it)
+            if (Math.abs(roundedEachUnits - Math.round(roundedEachUnits)) > 0.001) {
                 // Still decimal after conversion - flag as warning
                 product.quantity = originalQty;
                 product.hasWarning = true;
-                product.conversionNote = `⚠️ ${originalQty}kg → ${eachUnits} ${productCode}E (still decimal)`;
+                product.conversionNote = `⚠️ ${originalQty}kg → ${roundedEachUnits.toFixed(1)} ${productCode}E (still decimal)`;
+                console.log(`${productCode}: Still decimal after conversion`);
                 return product;
             }
             
             // Successful conversion to whole number
-            product.quantity = eachUnits;
+            const wholeEachUnits = Math.round(roundedEachUnits);
+            product.quantity = wholeEachUnits;
             product.conversionApplied = true;
-            product.conversionNote = `✅ ${originalQty}kg → ${eachUnits} ${productCode}E (${conversion.eachWeight}g each)`;
+            product.conversionNote = `✅ ${originalQty}kg → ${wholeEachUnits} ${productCode}E (${conversion.eachWeight}g each)`;
             
             // Recalculate prices based on new quantity
             product.netPrice = product.quantity * product.unitPrice;
             
+            console.log(`${productCode}: Successfully converted to ${wholeEachUnits} units`);
             return product;
         }
 
@@ -1630,9 +1656,12 @@
                     const skuWithSuffix = product.productCode + getSKUSuffix(product);
                     const row = document.createElement('tr');
                     
-                    // Add warning class if product has issues
+                    // Add styling based on conversion status
                     if (product.hasWarning) {
                         row.classList.add('decimal-warning');
+                    } else if (product.conversionApplied) {
+                        // Add green highlighting for successful conversions
+                        row.classList.add('conversion-success');
                     }
                     
                     row.innerHTML = `
