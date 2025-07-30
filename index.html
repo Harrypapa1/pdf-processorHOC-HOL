@@ -386,14 +386,26 @@
             font-size: inherit;
         }
         
-        .editable-cell input:focus {
+        .editable-cell select {
+            border: 1px solid transparent;
+            background: transparent;
+            padding: 2px 5px;
+            border-radius: 3px;
+            width: 100%;
+            font-family: inherit;
+            font-size: inherit;
+        }
+        
+        .editable-cell input:focus,
+        .editable-cell select:focus {
             outline: none;
             border-color: #3498db;
             background: #f8fafc;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
         
-        .editable-cell.editing input {
+        .editable-cell.editing input,
+        .editable-cell.editing select {
             border-color: #e3e8ef;
             background: white;
         }
@@ -852,7 +864,7 @@
                                     💡 Click "Edit Data" to modify PO number, dates, quantities, SKU codes, and case sizes<br>
                                     📦 Decimal quantities are automatically converted using your product settings<br>
                                     🔴 Red highlighting indicates problematic decimals that need attention<br>
-                                    📋 Case sizes: Use "1xEach", "1xKg", or "1xBox" to control export SKU suffixes (E/K/B)
+                                    📋 Case sizes: Select "Each" (E), "Kilo" (K), or "Box" (B) to control export SKU suffixes
                                 </div>
                             </div>
                             <div>
@@ -1145,6 +1157,21 @@
             return product;
         }
 
+        // Helper function to determine case size type from existing values
+        function getCaseSizeType(caseSize) {
+            if (!caseSize) return 'Each';
+            
+            const caseLower = caseSize.toLowerCase();
+            
+            if (caseLower.includes('kg') || caseLower.includes('kilo')) {
+                return 'Kilo';
+            } else if (caseLower.includes('box') || caseLower.includes('bx')) {
+                return 'Box';
+            } else {
+                return 'Each';
+            }
+        }
+
         // Get SKU suffix with conversion logic
         function getSKUSuffix(product) {
             const caseSize = product.caseSize;
@@ -1157,9 +1184,8 @@
             
             if (!caseSize) return 'E'; // Default to EACH if no case size
             
-            const caseLower = caseSize.toLowerCase();
-            
-            if (caseLower.includes('kg') || caseLower.includes('kilo')) {
+            // Handle the simplified dropdown values
+            if (caseSize === 'Kilo') {
                 // Check if this product should avoid K suffix due to decimals
                 const hasConversion = productConversionsCache.has(productCode);
                 const isDecimal = isDecimalQuantity(product.originalQuantity || product.quantity);
@@ -1169,10 +1195,10 @@
                     return 'E';
                 }
                 return 'K';
-            } else if (caseLower.includes('box') || caseLower.includes('bx')) {
+            } else if (caseSize === 'Box') {
                 return 'B';
             } else {
-                return 'E'; // Default to EACH for everything else
+                return 'E'; // Default to EACH for "Each" and everything else
             }
         }
 
@@ -1796,8 +1822,11 @@
                                    style="text-transform: uppercase;" />
                         </td>
                         <td class="editable-cell">
-                            <input type="text" value="${product.caseSize}" 
-                                   onchange="updateProductField(${index}, 'caseSize', this.value)" />
+                            <select onchange="updateProductField(${index}, 'caseSize', this.value)">
+                                <option value="Each" ${getCaseSizeType(product.caseSize) === 'Each' ? 'selected' : ''}>Each</option>
+                                <option value="Kilo" ${getCaseSizeType(product.caseSize) === 'Kilo' ? 'selected' : ''}>Kilo</option>
+                                <option value="Box" ${getCaseSizeType(product.caseSize) === 'Box' ? 'selected' : ''}>Box</option>
+                            </select>
                         </td>
                         <td>£${product.unitPrice.toFixed(2)}</td>
                         <td>£${product.netPrice.toFixed(2)}</td>
@@ -1863,7 +1892,9 @@
                 editableCells.forEach(cell => {
                     cell.classList.add('editing');
                     const input = cell.querySelector('input');
+                    const select = cell.querySelector('select');
                     if (input) input.disabled = false;
+                    if (select) select.disabled = false;
                 });
             } else {
                 editBtn.textContent = '✏️ Edit Data';
@@ -1879,7 +1910,9 @@
                 editableCells.forEach(cell => {
                     cell.classList.remove('editing');
                     const input = cell.querySelector('input');
+                    const select = cell.querySelector('select');
                     if (input) input.disabled = true;
+                    if (select) select.disabled = true;
                 });
             }
             
