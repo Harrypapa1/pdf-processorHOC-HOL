@@ -7,7 +7,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        
+        // Parse standard order template  
+        function parseStandardOrder(text, filename) {pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
     </script>
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
@@ -2399,10 +2401,18 @@
                 // Extract text from PDF
                 const text = textContent.items.map(item => item.str).join(' ');
                 
+                // Debug logging to see what text we're actually getting
+                console.log('Extracted PDF text:', text.substring(0, 500) + '...');
+                
                 // Determine template type and parse
+                const isPickingNote = text.includes('Picking Note') || text.includes('Basket ID');
                 const isConsolidated = text.includes('Consolidated Purchase Order');
                 
-                if (isConsolidated) {
+                console.log('Format detection:', { isPickingNote, isConsolidated });
+                
+                if (isPickingNote) {
+                    return parsePickingNote(text, file.name);
+                } else if (isConsolidated) {
                     return parseConsolidatedOrder(text, file.name);
                 } else {
                     return parseStandardOrder(text, file.name);
@@ -2531,8 +2541,222 @@
             return order;
         }
         
-        // Parse standard order template  
-        function parseStandardOrder(text, filename) {
+        // Parse picking note template  
+        function parsePickingNote(text, filename) {
+            console.log('Parsing as Picking Note, text length:', text.length);
+            
+            const order = {
+                filename: filename,
+                type: 'Picking Note',
+                customerCode: '',
+                customerName: '',
+                poNumber: '', // Will use Basket ID
+                orderDate: '',
+                deliveryDate: '',
+                products: [],
+                total: 0 // Will be 0 since no pricing
+            };
+            
+            // Extract Basket ID (use as PO Number)
+            const basketIdPatterns = [
+                /Basket ID\s+(\d+)/,
+                /Basket\s+ID\s+(\d+)/,
+                /BasketID\s+(\d+)/
+            ];
+            
+            for (const pattern of basketIdPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.poNumber = match[1];
+                    console.log('Found Basket ID:', match[1]);
+                    break;
+                }
+            }
+            
+            // Extract dates (convert from "30-Jul-2025" to "30/07/2025" format)
+            const orderDatePatterns = [
+                /Order date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/,
+                /Order\s+date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/
+            ];
+            
+            for (const pattern of orderDatePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.orderDate = convertPickingDate(match[1]);
+                    console.log('Found Order Date:', match[1], '→', order.orderDate);
+                    break;
+                }
+            }
+            
+            const deliveryDatePatterns = [
+                /Delivery date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/,
+                /Delivery\s+date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/
+            ];
+            
+            for (const pattern of deliveryDatePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.deliveryDate = convertPickingDate(match[1]);
+                    console.log('Found Delivery Date:', match[1], '→', order.deliveryDate);
+                    break;
+                }
+            }
+            
+            // Extract Customer Reference (use as customer code)
+            const customerRefPatterns = [
+                /Customer ref\s+(\S+)/,
+                /Customer\s+ref\s+(\S+)/
+            ];
+            
+            for (const pattern of customerRefPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.customerCode = match[1];
+                    console.log('Found Customer Ref:', match[1]);
+                    break;
+                }
+            }
+            
+            // Extract Customer Name - try multiple approaches
+            const customerNamePatterns = [
+                /Delivery Address[^M]*?(Mitie Ltd[^A-Z]*)/i,
+                /Delivery Address[^U]*?(University College Hospital[^A-Z]*)/i,
+                /(Mitie Ltd[^A-Z]*)/i,
+                /(University College Hospital[^A-Z]*)/i
+            ];
+            
+            for (const pattern of customerNamePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    order.customerName = match[1].trim().replace(/\s+/g, ' ');
+                    console.log('Found Customer Name:', order.customerName);
+                    break;
+                }
+            }
+            
+            // Extract products - try multiple regex patterns
+            const productPatterns = [
+                // Pattern 1: Standard format with /- suffix
+                /(\d+[A-Z]+)\/\-\s+([^0-9]+?)\s+(1x\w+|[\d.]+\s*Kg|\£\s*per\s*Kg)\s+(\d+(?:\.\d+)?)/g,
+                // Pattern 2: Without /- suffix  
+                /(\d+[A-Z]+)\s+([^0-9]+?)\s+(1x\w+|[\d.]+\s*Kg|\£\s*per\s*Kg)\s+(\d+(?:\.\d+)?)/g,
+                // Pattern 3: More flexible spacing
+                /(\d+[A-Z\/\-]+)\s+(.+?)\s+(1x\w+|[\d.]+\s*Kg|\£\s*per\s*Kg)\s+(\d+(?:\.\d+)?)\s+(?:Kg\s+)?_+/g
+            ];
+            
+            let productsFound = 0;
+            
+            for (const pattern of productPatterns) {
+                let match;
+                while ((match = pattern.exec(text)) !== null) {
+                    let productCode = match[1].replace(/\/\-/g, '').trim(); // Remove /- suffix
+                    const description = match[2].trim();
+                    const packSize = match[3].trim();
+                    const quantity = parseFloat(match[4]);
+                    
+                    console.log('Product match:', { productCode, description, packSize, quantity });
+                    
+                    const product = {
+                        quantity: quantity,
+                        description: description,
+                        productCode: productCode,
+                        caseSize: packSize,
+                        unitPrice: 0, // No pricing in picking notes
+                        netPrice: 0   // No pricing in picking notes
+                    };
+                    
+                    if (product.quantity > 0 && product.productCode && product.productCode.length > 3) {
+                        order.products.push(product);
+                        productsFound++;
+                    }
+                }
+                
+                if (productsFound > 0) {
+                    console.log(`Found ${productsFound} products with pattern ${productPatterns.indexOf(pattern) + 1}`);
+                    break; // Stop trying patterns if we found products
+                }
+            }
+            
+            // Alternative line-by-line parsing if regex fails
+            if (order.products.length === 0) {
+                console.log('Trying line-by-line parsing...');
+                const lines = text.split(/\s+/);
+                
+                for (let i = 0; i < lines.length - 4; i++) {
+                    const line = lines[i];
+                    
+                    // Look for product code pattern
+                    if (/^\d+[A-Z]+\/?\-?$/.test(line)) {
+                        const productCode = line.replace(/\/\-/g, '');
+                        
+                        // Try to find description, pack size, and quantity in following tokens
+                        let description = '';
+                        let packSize = '';
+                        let quantity = 0;
+                        
+                        for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+                            const token = lines[j];
+                            
+                            // Pack size patterns
+                            if (/^1x\w+$|^\d+\.\d+\s*Kg$/.test(token)) {
+                                packSize = token;
+                            }
+                            // Quantity patterns
+                            else if (/^\d+(?:\.\d+)?$/.test(token) && parseFloat(token) > 0 && parseFloat(token) < 1000) {
+                                quantity = parseFloat(token);
+                                
+                                if (packSize && quantity > 0) {
+                                    // Everything between productCode and packSize is description
+                                    description = lines.slice(i + 1, j - (packSize === lines[j-1] ? 1 : 0)).join(' ').trim();
+                                    
+                                    const product = {
+                                        quantity: quantity,
+                                        description: description,
+                                        productCode: productCode,
+                                        caseSize: packSize,
+                                        unitPrice: 0,
+                                        netPrice: 0
+                                    };
+                                    
+                                    if (description.length > 2) {
+                                        order.products.push(product);
+                                        console.log('Line parsing found product:', product);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            console.log(`Total products extracted: ${order.products.length}`);
+            
+            // Set total to 0 since no pricing
+            order.total = 0;
+            
+            return order;
+        }
+        
+        // Helper function to convert picking note dates
+        function convertPickingDate(dateStr) {
+            // Convert "30-Jul-2025" to "30/07/2025"
+            const months = {
+                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+            };
+            
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const month = months[parts[1]] || '01';
+                const year = parts[2];
+                return `${day}/${month}/${year}`;
+            }
+            
+            return dateStr; // Return original if parsing fails
+        }
             const order = {
                 filename: filename,
                 type: 'Standard',
