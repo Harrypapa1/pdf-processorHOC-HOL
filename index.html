@@ -2401,14 +2401,9 @@
                 // Extract text from PDF
                 const text = textContent.items.map(item => item.str).join(' ');
                 
-                // Debug logging to see what text we're actually getting
-                console.log('Extracted PDF text:', text.substring(0, 500) + '...');
-                
                 // Determine template type and parse
-                const isPickingNote = text.includes('Picking Note') || text.includes('Basket ID');
                 const isConsolidated = text.includes('Consolidated Purchase Order');
-                
-                console.log('Format detection:', { isPickingNote, isConsolidated });
+                const isPickingNote = text.includes('Picking Note');
                 
                 if (isPickingNote) {
                     return parsePickingNote(text, file.name);
@@ -2543,8 +2538,6 @@
         
         // Parse picking note template  
         function parsePickingNote(text, filename) {
-            console.log('Parsing as Picking Note, text length:', text.length);
-            
             const order = {
                 filename: filename,
                 type: 'Picking Note',
@@ -2558,179 +2551,114 @@
             };
             
             // Extract Basket ID (use as PO Number)
-            const basketIdPatterns = [
-                /Basket ID\s+(\d+)/,
-                /Basket\s+ID\s+(\d+)/,
-                /BasketID\s+(\d+)/
-            ];
-            
-            for (const pattern of basketIdPatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.poNumber = match[1];
-                    console.log('Found Basket ID:', match[1]);
-                    break;
-                }
+            const basketIdMatch = text.match(/Basket ID\s+(\d+)/);
+            if (basketIdMatch) {
+                order.poNumber = basketIdMatch[1];
             }
             
             // Extract dates (convert from "30-Jul-2025" to "30/07/2025" format)
-            const orderDatePatterns = [
-                /Order date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/,
-                /Order\s+date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/
-            ];
-            
-            for (const pattern of orderDatePatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.orderDate = convertPickingDate(match[1]);
-                    console.log('Found Order Date:', match[1], '→', order.orderDate);
-                    break;
-                }
+            const orderDateMatch = text.match(/Order date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/);
+            if (orderDateMatch) {
+                order.orderDate = convertPickingDate(orderDateMatch[1]);
             }
             
-            const deliveryDatePatterns = [
-                /Delivery date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/,
-                /Delivery\s+date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/
-            ];
-            
-            for (const pattern of deliveryDatePatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.deliveryDate = convertPickingDate(match[1]);
-                    console.log('Found Delivery Date:', match[1], '→', order.deliveryDate);
-                    break;
-                }
+            const deliveryDateMatch = text.match(/Delivery date\s+(\d{1,2}-[A-Za-z]{3}-\d{4})/);
+            if (deliveryDateMatch) {
+                order.deliveryDate = convertPickingDate(deliveryDateMatch[1]);
             }
             
             // Extract Customer Reference (use as customer code)
-            const customerRefPatterns = [
-                /Customer ref\s+(\S+)/,
-                /Customer\s+ref\s+(\S+)/
-            ];
-            
-            for (const pattern of customerRefPatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    order.customerCode = match[1];
-                    console.log('Found Customer Ref:', match[1]);
-                    break;
-                }
+            const customerRefMatch = text.match(/Customer ref\s+(\S+)/);
+            if (customerRefMatch) {
+                order.customerCode = customerRefMatch[1];
             }
             
-            // Extract Customer Name - try multiple approaches
+            // Extract Customer Name from Delivery Address section
             const customerNamePatterns = [
-                /Delivery Address[^M]*?(Mitie Ltd[^A-Z]*)/i,
-                /Delivery Address[^U]*?(University College Hospital[^A-Z]*)/i,
-                /(Mitie Ltd[^A-Z]*)/i,
-                /(University College Hospital[^A-Z]*)/i
+                /Delivery Address[^M]*?([A-Za-z][^\\n]*Ltd[^\\n]*)/,
+                /Delivery Address[^U]*?(University College Hospital[^\\n]*)/,
+                /Delivery Address[^\\n]*\\n[^\\n]*?([A-Za-z][^\\n]*Ltd[^\\n]*)/
             ];
             
             for (const pattern of customerNamePatterns) {
                 const match = text.match(pattern);
                 if (match) {
-                    order.customerName = match[1].trim().replace(/\s+/g, ' ');
-                    console.log('Found Customer Name:', order.customerName);
+                    order.customerName = match[1].trim();
                     break;
                 }
             }
             
-            // Extract products - try multiple regex patterns
-            const productPatterns = [
-                // Pattern 1: Standard format with /- suffix
-                /(\d+[A-Z]+)\/\-\s+([^0-9]+?)\s+(1x\w+|[\d.]+\s*Kg|\£\s*per\s*Kg)\s+(\d+(?:\.\d+)?)/g,
-                // Pattern 2: Without /- suffix  
-                /(\d+[A-Z]+)\s+([^0-9]+?)\s+(1x\w+|[\d.]+\s*Kg|\£\s*per\s*Kg)\s+(\d+(?:\.\d+)?)/g,
-                // Pattern 3: More flexible spacing
-                /(\d+[A-Z\/\-]+)\s+(.+?)\s+(1x\w+|[\d.]+\s*Kg|\£\s*per\s*Kg)\s+(\d+(?:\.\d+)?)\s+(?:Kg\s+)?_+/g
-            ];
-            
-            let productsFound = 0;
-            
-            for (const pattern of productPatterns) {
-                let match;
-                while ((match = pattern.exec(text)) !== null) {
-                    let productCode = match[1].replace(/\/\-/g, '').trim(); // Remove /- suffix
-                    const description = match[2].trim();
-                    const packSize = match[3].trim();
-                    const quantity = parseFloat(match[4]);
-                    
-                    console.log('Product match:', { productCode, description, packSize, quantity });
-                    
-                    const product = {
-                        quantity: quantity,
-                        description: description,
-                        productCode: productCode,
-                        caseSize: packSize,
-                        unitPrice: 0, // No pricing in picking notes
-                        netPrice: 0   // No pricing in picking notes
-                    };
-                    
-                    if (product.quantity > 0 && product.productCode && product.productCode.length > 3) {
-                        order.products.push(product);
-                        productsFound++;
-                    }
-                }
-                
-                if (productsFound > 0) {
-                    console.log(`Found ${productsFound} products with pattern ${productPatterns.indexOf(pattern) + 1}`);
-                    break; // Stop trying patterns if we found products
+            // If no customer name found, try alternative approach
+            if (!order.customerName) {
+                const mitieMatch = text.match(/(Mitie Ltd[^\\n]*)/);
+                const hospitalMatch = text.match(/(University College Hospital[^\\n]*)/);
+                if (mitieMatch) {
+                    order.customerName = mitieMatch[1].trim();
+                } else if (hospitalMatch) {
+                    order.customerName = hospitalMatch[1].trim();
                 }
             }
             
-            // Alternative line-by-line parsing if regex fails
-            if (order.products.length === 0) {
-                console.log('Trying line-by-line parsing...');
-                const lines = text.split(/\s+/);
+            // Extract products from table
+            // Pattern: ProductCode/- Description PackSize Quantity _______
+            const productPattern = /(\d+[A-Z]+\/\-)\s+([^\\n]+?)\s+(1x\w+|\d+\.\d+\s+Kg|£\s+per\s+Kg)\s+(\d+(?:\.\d+)?)\s+(?:Kg\s+)?_+/g;
+            
+            let match;
+            while ((match = productPattern.exec(text)) !== null) {
+                const productCode = match[1].replace('/-', ''); // Remove /- suffix
+                const description = match[2].trim();
+                const packSize = match[3].trim();
+                const quantity = parseFloat(match[4]);
                 
-                for (let i = 0; i < lines.length - 4; i++) {
-                    const line = lines[i];
+                const product = {
+                    quantity: quantity,
+                    description: description,
+                    productCode: productCode,
+                    caseSize: packSize,
+                    unitPrice: 0, // No pricing in picking notes
+                    netPrice: 0   // No pricing in picking notes
+                };
+                
+                if (product.quantity > 0 && product.productCode) {
+                    order.products.push(product);
+                }
+            }
+            
+            // Alternative product extraction if main pattern fails
+            if (order.products.length === 0) {
+                const lines = text.split('\\n');
+                let inProductSection = false;
+                
+                for (const line of lines) {
+                    if (line.includes('Product Description Pack size Units ordered')) {
+                        inProductSection = true;
+                        continue;
+                    }
                     
-                    // Look for product code pattern
-                    if (/^\d+[A-Z]+\/?\-?$/.test(line)) {
-                        const productCode = line.replace(/\/\-/g, '');
-                        
-                        // Try to find description, pack size, and quantity in following tokens
-                        let description = '';
-                        let packSize = '';
-                        let quantity = 0;
-                        
-                        for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
-                            const token = lines[j];
+                    if (inProductSection && line.includes('Powered by TCPDF')) {
+                        break;
+                    }
+                    
+                    if (inProductSection) {
+                        // Match lines like: "119095S/- Kiwi 1x6ea 2 _____________"
+                        const productMatch = line.match(/^(\d+[A-Z]+)\/\-\s+(.+?)\s+(1x\w+|\d+\.\d+\s+Kg)\s+(\d+(?:\.\d+)?)/);
+                        if (productMatch) {
+                            const product = {
+                                quantity: parseFloat(productMatch[4]),
+                                description: productMatch[2].trim(),
+                                productCode: productMatch[1],
+                                caseSize: productMatch[3].trim(),
+                                unitPrice: 0,
+                                netPrice: 0
+                            };
                             
-                            // Pack size patterns
-                            if (/^1x\w+$|^\d+\.\d+\s*Kg$/.test(token)) {
-                                packSize = token;
-                            }
-                            // Quantity patterns
-                            else if (/^\d+(?:\.\d+)?$/.test(token) && parseFloat(token) > 0 && parseFloat(token) < 1000) {
-                                quantity = parseFloat(token);
-                                
-                                if (packSize && quantity > 0) {
-                                    // Everything between productCode and packSize is description
-                                    description = lines.slice(i + 1, j - (packSize === lines[j-1] ? 1 : 0)).join(' ').trim();
-                                    
-                                    const product = {
-                                        quantity: quantity,
-                                        description: description,
-                                        productCode: productCode,
-                                        caseSize: packSize,
-                                        unitPrice: 0,
-                                        netPrice: 0
-                                    };
-                                    
-                                    if (description.length > 2) {
-                                        order.products.push(product);
-                                        console.log('Line parsing found product:', product);
-                                    }
-                                    break;
-                                }
+                            if (product.quantity > 0 && product.productCode) {
+                                order.products.push(product);
                             }
                         }
                     }
                 }
             }
-            
-            console.log(`Total products extracted: ${order.products.length}`);
             
             // Set total to 0 since no pricing
             order.total = 0;
