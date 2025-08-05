@@ -86,6 +86,12 @@
             box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .btn-success {
             background: linear-gradient(135deg, #27ae60, #2ecc71);
         }
@@ -394,6 +400,19 @@
             display: block;
         }
 
+        .uom-card {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .uom-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
         @media (max-width: 768px) {
             .form-row, .product-form-row {
                 grid-template-columns: 1fr;
@@ -595,17 +614,108 @@
                 </div>
             </div>
 
-            <!-- Product Catalog Tab (PLACEHOLDER - Coming Next) -->
+            <!-- Product Catalog Tab -->
             <div id="catalogTab" class="tab-content">
-                <div class="section">
-                    <h2>📦 Product Catalog</h2>
-                    <div class="info-message">
-                        <strong>Coming Soon!</strong> This tab will allow you to upload and manage all 6,729+ product SKUs from your Excel file.
+                <!-- Stats Overview -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="catalogTotal">0</div>
+                        <div class="stat-label">Total Products</div>
                     </div>
-                    <p style="text-align: center; color: #7f8c8d; padding: 40px;">
-                        🚧 Under Development 🚧<br>
-                        Tab content will be added in the next step!
-                    </p>
+                    <div class="stat-card">
+                        <div class="stat-number product-stat" id="catalogCodes">0</div>
+                        <div class="stat-label">Unique Codes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="catalogUoms">0</div>
+                        <div class="stat-label">UOM Types</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number product-stat" id="catalogStatus">Ready</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="section">
+                    <h2>📤 Upload Product Catalog</h2>
+                    <div class="info-message">
+                        <strong>Expected Format:</strong> Excel/CSV with columns: PR.CODE, UOM, Description<br>
+                        <strong>Example:</strong> ABSM1, B, 1KG ALMOND BUTTER SMOOTH **ALLERGEN
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="catalogFileInput">Select Excel/CSV File</label>
+                        <input type="file" id="catalogFileInput" class="form-control" accept=".xlsx,.xls,.csv">
+                    </div>
+                    
+                    <div id="catalogProgress" style="display: none; margin: 20px 0;">
+                        <div style="background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden;">
+                            <div id="catalogProgressBar" style="background: #28a745; height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <p id="catalogProgressText" style="margin-top: 10px; text-align: center;">Processing...</p>
+                    </div>
+                    
+                    <button id="catalogUploadBtn" onclick="uploadCatalogToFirebase()" class="btn btn-success" disabled>
+                        🔥 Upload to Firebase
+                    </button>
+                    <button id="catalogDownloadBtn" onclick="downloadProcessedCatalog()" class="btn btn-secondary" disabled>
+                        💾 Download Processed Data
+                    </button>
+                </div>
+
+                <!-- Preview Section -->
+                <div id="catalogPreview" class="section" style="display: none;">
+                    <h2>📋 Data Preview</h2>
+                    <div id="catalogUomBreakdown" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0;">
+                        <!-- UOM breakdown cards will appear here -->
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Final SKU</th>
+                                <th>Product Code</th>
+                                <th>UOM</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="catalogPreviewBody">
+                            <!-- Preview data will appear here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Current Catalog Section -->
+                <div class="section">
+                    <h2>📊 Current Product Catalog</h2>
+                    <div style="margin-bottom: 15px;">
+                        <button onclick="refreshCatalogData()" class="btn">🔄 Refresh from Firebase</button>
+                        <button onclick="searchCatalogProducts()" class="btn btn-secondary">🔍 Search Products</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="text" id="catalogSearchInput" class="form-control" placeholder="Search by SKU or description...">
+                    </div>
+                    
+                    <table class="data-table" id="catalogTable">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Product Code</th>
+                                <th>UOM</th>
+                                <th>Description</th>
+                                <th>Added</th>
+                            </tr>
+                        </thead>
+                        <tbody id="catalogTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                    Click "Refresh from Firebase" to load existing products or upload a new file.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -618,6 +728,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script>
         // Firebase configuration
@@ -638,6 +749,7 @@
         const correctPassword = 'hoc2025';
         let currentEmailMappings = [];
         let currentProductConversions = [];
+        let catalogData = [];
 
         function checkPassword() {
             const password = document.getElementById('passwordInput').value;
@@ -648,6 +760,7 @@
                 document.getElementById('mainContent').style.display = 'block';
                 loadEmailMappings();
                 loadProductConversions();
+                initializeCatalogTab();
             } else {
                 passwordAttempts++;
                 if (passwordAttempts >= maxAttempts) {
@@ -677,6 +790,298 @@
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Product Catalog Functions
+        function initializeCatalogTab() {
+            const fileInput = document.getElementById('catalogFileInput');
+            fileInput.addEventListener('change', handleCatalogFileSelect);
+            
+            const searchInput = document.getElementById('catalogSearchInput');
+            searchInput.addEventListener('input', handleCatalogSearch);
+        }
+
+        function handleCatalogFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processCatalogFile(file);
+            }
+        }
+
+        function processCatalogFile(file) {
+            showCatalogMessage('Processing file...', 'info');
+            showCatalogProgress(0, 'Reading file...');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    processCatalogData(jsonData);
+                } catch (error) {
+                    showCatalogMessage('Error processing file: ' + error.message, 'error');
+                    hideCatalogProgress();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processCatalogData(jsonData) {
+            catalogData = [];
+            const uomCounts = {};
+            let validCount = 0;
+            
+            showCatalogProgress(25, 'Processing products...');
+            
+            // Skip header row
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                
+                if (!row || row.length < 3) continue;
+                
+                const [prCode, uom, description] = row;
+                
+                if (!prCode || !uom || !description) continue;
+                
+                const finalSKU = prCode + uom;
+                
+                catalogData.push({
+                    sku: finalSKU,
+                    prCode: prCode,
+                    uom: uom,
+                    description: description.toString().trim(),
+                    createdAt: new Date().toISOString()
+                });
+                
+                uomCounts[uom] = (uomCounts[uom] || 0) + 1;
+                validCount++;
+                
+                // Update progress
+                if (i % 100 === 0) {
+                    showCatalogProgress(25 + (i / jsonData.length) * 50, `Processed ${i} rows...`);
+                }
+            }
+            
+            showCatalogProgress(100, 'Complete!');
+            updateCatalogStats(validCount, Object.keys(uomCounts).length, uomCounts);
+            displayCatalogPreview();
+            
+            // Enable buttons
+            document.getElementById('catalogUploadBtn').disabled = false;
+            document.getElementById('catalogDownloadBtn').disabled = false;
+            
+            showCatalogMessage(`Successfully processed ${validCount} products!`, 'success');
+            setTimeout(hideCatalogProgress, 1000);
+        }
+
+        function updateCatalogStats(total, uomTypes, uomCounts) {
+            document.getElementById('catalogTotal').textContent = total.toLocaleString();
+            document.getElementById('catalogCodes').textContent = new Set(catalogData.map(p => p.prCode)).size.toLocaleString();
+            document.getElementById('catalogUoms').textContent = uomTypes;
+            document.getElementById('catalogStatus').textContent = 'Processed';
+            
+            // Update UOM breakdown
+            const breakdown = document.getElementById('catalogUomBreakdown');
+            breakdown.innerHTML = '';
+            
+            Object.entries(uomCounts).sort().forEach(([uom, count]) => {
+                const card = document.createElement('div');
+                card.className = 'uom-card';
+                card.innerHTML = `<h3>${count.toLocaleString()}</h3><p>${uom} Products</p>`;
+                breakdown.appendChild(card);
+            });
+        }
+
+        function displayCatalogPreview() {
+            const tbody = document.getElementById('catalogPreviewBody');
+            tbody.innerHTML = '';
+            
+            // Show first 20 products
+            catalogData.slice(0, 20).forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${product.sku}</strong></td>
+                    <td>${product.prCode}</td>
+                    <td><span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 4px;">${product.uom}</span></td>
+                    <td>${product.description}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            if (catalogData.length > 20) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="4" style="text-align: center; font-style: italic; color: #718096;">
+                        ... and ${(catalogData.length - 20).toLocaleString()} more products
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+            
+            document.getElementById('catalogPreview').style.display = 'block';
+        }
+
+        async function uploadCatalogToFirebase() {
+            if (catalogData.length === 0) {
+                showCatalogMessage('No data to upload. Please process a file first.', 'error');
+                return;
+            }
+            
+            try {
+                showCatalogMessage('Uploading to Firebase...', 'info');
+                showCatalogProgress(0, 'Starting upload...');
+                
+                // Upload in batches
+                const batchSize = 500;
+                const totalBatches = Math.ceil(catalogData.length / batchSize);
+                
+                for (let i = 0; i < totalBatches; i++) {
+                    const batch = db.batch();
+                    const startIndex = i * batchSize;
+                    const endIndex = Math.min(startIndex + batchSize, catalogData.length);
+                    const batchData = catalogData.slice(startIndex, endIndex);
+                    
+                    batchData.forEach(product => {
+                        const docRef = db.collection('productCatalog').doc(product.sku);
+                        batch.set(docRef, {
+                            sku: product.sku,
+                            prCode: product.prCode,
+                            uom: product.uom,
+                            description: product.description,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    
+                    await batch.commit();
+                    
+                    const progress = ((i + 1) / totalBatches) * 100;
+                    showCatalogProgress(progress, `Uploaded batch ${i + 1}/${totalBatches}...`);
+                }
+                
+                showCatalogMessage(`Successfully uploaded ${catalogData.length} products to Firebase!`, 'success');
+                document.getElementById('catalogStatus').textContent = 'Uploaded';
+                setTimeout(hideCatalogProgress, 1000);
+                
+            } catch (error) {
+                console.error('Error uploading to Firebase:', error);
+                showCatalogMessage('Error uploading to Firebase: ' + error.message, 'error');
+                hideCatalogProgress();
+            }
+        }
+
+        async function refreshCatalogData() {
+            try {
+                showCatalogMessage('Loading from Firebase...', 'info');
+                showCatalogProgress(50, 'Fetching products...');
+                
+                const snapshot = await db.collection('productCatalog').limit(100).get();
+                const products = [];
+                
+                snapshot.forEach(doc => {
+                    products.push(doc.data());
+                });
+                
+                showCatalogProgress(100, 'Complete!');
+                displayCurrentCatalog(products);
+                
+                if (products.length > 0) {
+                    showCatalogMessage(`Loaded ${products.length} products from Firebase.`, 'success');
+                } else {
+                    showCatalogMessage('No products found in Firebase. Upload some data first.', 'info');
+                }
+                
+                setTimeout(hideCatalogProgress, 1000);
+                
+            } catch (error) {
+                console.error('Error loading from Firebase:', error);
+                showCatalogMessage('Error loading from Firebase: ' + error.message, 'error');
+                hideCatalogProgress();
+            }
+        }
+
+        function displayCurrentCatalog(products) {
+            const tbody = document.getElementById('catalogTableBody');
+            tbody.innerHTML = '';
+            
+            if (products.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            No products found. Upload a file or check your Firebase connection.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${product.sku}</strong></td>
+                    <td>${product.prCode}</td>
+                    <td><span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 4px;">${product.uom}</span></td>
+                    <td>${product.description}</td>
+                    <td>${product.createdAt ? new Date(product.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function handleCatalogSearch() {
+            // Search functionality placeholder
+            showCatalogMessage('Search functionality coming in next update!', 'info');
+        }
+
+        function searchCatalogProducts() {
+            // Search functionality placeholder
+            showCatalogMessage('Advanced search coming in next update!', 'info');
+        }
+
+        function downloadProcessedCatalog() {
+            if (catalogData.length === 0) {
+                showCatalogMessage('No data to download. Please process a file first.', 'error');
+                return;
+            }
+            
+            const headers = ['SKU', 'Product Code', 'UOM', 'Description', 'Created At'];
+            const csvContent = [
+                headers.join(','),
+                ...catalogData.map(product => 
+                    [product.sku, product.prCode, product.uom, `"${product.description}"`, product.createdAt].join(',')
+                )
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'product_catalog.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showCatalogMessage('Downloaded processed catalog data.', 'success');
+        }
+
+        function showCatalogProgress(percent, text) {
+            const progressContainer = document.getElementById('catalogProgress');
+            const progressBar = document.getElementById('catalogProgressBar');
+            const progressText = document.getElementById('catalogProgressText');
+            
+            progressContainer.style.display = 'block';
+            progressBar.style.width = percent + '%';
+            progressText.textContent = text;
+        }
+
+        function hideCatalogProgress() {
+            document.getElementById('catalogProgress').style.display = 'none';
+        }
+
+        function showCatalogMessage(message, type) {
+            showMessage(`[Catalog] ${message}`, type);
         }
 
         // Email Management Functions
