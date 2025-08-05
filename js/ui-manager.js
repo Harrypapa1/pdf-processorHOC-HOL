@@ -22,7 +22,101 @@ class UIManager {
         this.currentFileIndex = 0;
         this.fileQueue = [];
         
+        // Initialize queue persistence
+        this.queuePersistence = new QueuePersistence();
+        
         this.initializeEventListeners();
+        this.initializeQueuePersistence();
+    }
+
+    /**
+     * Initialize queue persistence functionality
+     */
+    async initializeQueuePersistence() {
+        // Setup page refresh warning
+        this.setupPageRefreshWarning();
+        
+        // Restore queue on page load
+        await this.restoreQueueOnLoad();
+    }
+
+    /**
+     * Setup page refresh warning for unsaved files
+     */
+    setupPageRefreshWarning() {
+        let hasUnprocessedFiles = false;
+
+        // Update warning status when files are added/removed
+        const updateWarningStatus = () => {
+            hasUnprocessedFiles = this.fileQueue && this.fileQueue.length > 0;
+            this.updateWarningIndicator(hasUnprocessedFiles);
+        };
+
+        // Show warning indicator on page
+        this.updateWarningIndicator = (show) => {
+            let indicator = document.querySelector('.unsaved-changes-warning');
+            
+            if (show && !indicator) {
+                indicator = document.createElement('div');
+                indicator.className = 'unsaved-changes-warning';
+                indicator.textContent = 'You have unprocessed files in queue';
+                document.body.appendChild(indicator);
+            } else if (!show && indicator) {
+                indicator.remove();
+            }
+        };
+
+        // Warn before page unload
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnprocessedFiles) {
+                const message = 'You have unprocessed files in your queue. Are you sure you want to leave?';
+                e.preventDefault();
+                e.returnValue = message;
+                return message;
+            }
+        });
+
+        // Store the update function for use in other methods
+        this.updateWarningStatus = updateWarningStatus;
+    }
+
+    /**
+     * Restore queue on page load
+     */
+    async restoreQueueOnLoad() {
+        if (this.queuePersistence.hasSavedQueue()) {
+            const restoredFiles = await this.queuePersistence.restoreQueue();
+            if (restoredFiles.length > 0) {
+                // Add restored files to queue
+                restoredFiles.forEach(file => {
+                    const queueItem = {
+                        id: Date.now() + Math.random(),
+                        file: file,
+                        addedAt: new Date()
+                    };
+                    this.fileQueue.push(queueItem);
+                });
+                
+                this.updateQueueDisplay();
+                this.updateWarningStatus();
+            }
+        }
+    }
+
+    /**
+     * Auto-save queue whenever files are added/removed
+     */
+    async autoSaveQueue() {
+        if (this.fileQueue && this.fileQueue.length > 0) {
+            const files = this.fileQueue.map(item => item.file);
+            await this.queuePersistence.saveQueue(files);
+        } else {
+            this.queuePersistence.clearSavedQueue();
+        }
+        
+        if (this.updateWarningStatus) {
+            this.updateWarningStatus();
+        }
     }
 
     /**
@@ -104,6 +198,7 @@ class UIManager {
         window.removeFromQueue = (id) => {
             this.fileQueue = this.fileQueue.filter(item => item.id !== id);
             this.updateQueueDisplay();
+            this.autoSaveQueue(); // Auto-save after removing files
         };
 
         window.clearQueue = () => {
@@ -113,6 +208,7 @@ class UIManager {
             if (confirmClear) {
                 this.fileQueue = [];
                 this.updateQueueDisplay();
+                this.autoSaveQueue(); // Auto-save after clearing queue
             }
         };
 
@@ -162,6 +258,7 @@ class UIManager {
         });
         
         this.updateQueueDisplay();
+        this.autoSaveQueue(); // Auto-save after adding files
         
         // Clear the file input
         const fileInput = document.getElementById('fileInput');
@@ -808,6 +905,7 @@ class UIManager {
     clearFileQueue() {
         this.fileQueue = [];
         this.updateQueueDisplay();
+        this.autoSaveQueue(); // Auto-save after clearing queue
     }
 
     /**
@@ -844,6 +942,199 @@ class UIManager {
         if (resultsSection) {
             resultsSection.style.display = show ? 'block' : 'none';
         }
+    }
+}
+
+/**
+ * Queue Persistence Class
+ * Handles saving/restoring file queue using browser storage
+ */
+class QueuePersistence {
+    constructor() {
+        this.STORAGE_KEY = 'hoc_order_queue';
+        this.DB_NAME = 'EmailOrderProcessing';
+        this.DB_VERSION = 1;
+        this.STORE_NAME = 'fileQueue';
+        this.db = null;
+    }
+
+    // Initialize IndexedDB for file storage
+    async initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.db = request.result;
+                resolve(this.db);
+            };
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+                    db.createObjectStore(this.STORE_NAME, { keyPath: 'id' });
+                }
+            };
+        });
+    }
+
+    // Save file queue to browser storage
+    async saveQueue(fileQueue) {
+        try {
+            if (!this.db) await this.initDB();
+            
+            const fileData = [];
+            const transaction = this.db.transaction([this.STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(this.STORE_NAME);
+            
+            // Clear existing files
+            await store.clear();
+            
+            // Save each file
+            for (const file of fileQueue) {
+                const fileRecord = {
+                    id: file.name + '_' + file.lastModified,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    lastModified: file.lastModified,
+                    arrayBuffer: await file.arrayBuffer()
+                };
+                
+                await store.put(fileRecord);
+                
+                // Save metadata for localStorage
+                fileData.push({
+                    id: fileRecord.id,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    lastModified: file.lastModified,
+                    savedAt: Date.now()
+                });
+            }
+            
+            // Save metadata to localStorage
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
+                files: fileData,
+                savedAt: Date.now(),
+                count: fileData.length
+            }));
+            
+            console.log(`✅ Saved ${fileData.length} files to browser storage`);
+            this.showSaveNotification(fileData.length);
+            
+        } catch (error) {
+            console.error('❌ Failed to save queue:', error);
+        }
+    }
+
+    // Restore file queue from browser storage
+    async restoreQueue() {
+        try {
+            const saved = localStorage.getItem(this.STORAGE_KEY);
+            if (!saved) return [];
+            
+            const queueData = JSON.parse(saved);
+            const files = [];
+            
+            if (!this.db) await this.initDB();
+            
+            const transaction = this.db.transaction([this.STORE_NAME], 'readonly');
+            const store = transaction.objectStore(this.STORE_NAME);
+            
+            for (const fileInfo of queueData.files) {
+                const request = store.get(fileInfo.id);
+                const result = await new Promise((resolve) => {
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => resolve(null);
+                });
+                
+                if (result && result.arrayBuffer) {
+                    // Recreate File object
+                    const file = new File([result.arrayBuffer], result.name, {
+                        type: result.type,
+                        lastModified: result.lastModified
+                    });
+                    files.push(file);
+                }
+            }
+            
+            if (files.length > 0) {
+                console.log(`✅ Restored ${files.length} files from browser storage`);
+                this.showRestoreNotification(files.length, queueData.savedAt);
+            }
+            
+            return files;
+            
+        } catch (error) {
+            console.error('❌ Failed to restore queue:', error);
+            return [];
+        }
+    }
+
+    // Clear saved queue
+    clearSavedQueue() {
+        localStorage.removeItem(this.STORAGE_KEY);
+        if (this.db) {
+            const transaction = this.db.transaction([this.STORE_NAME], 'readwrite');
+            transaction.objectStore(this.STORE_NAME).clear();
+        }
+        console.log('🗑️ Cleared saved queue');
+    }
+
+    // Check if there's a saved queue
+    hasSavedQueue() {
+        const saved = localStorage.getItem(this.STORAGE_KEY);
+        if (!saved) return false;
+        
+        try {
+            const data = JSON.parse(saved);
+            return data.files && data.files.length > 0;
+        } catch {
+            return false;
+        }
+    }
+
+    // Show notification that files were saved
+    showSaveNotification(count) {
+        const notification = document.createElement('div');
+        notification.className = 'queue-notification save-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                💾 Auto-saved ${count} file${count !== 1 ? 's' : ''} to browser storage
+            </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    // Show notification that files were restored
+    showRestoreNotification(count, savedAt) {
+        const timeAgo = this.getTimeAgo(savedAt);
+        const notification = document.createElement('div');
+        notification.className = 'queue-notification restore-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                🔄 Restored ${count} file${count !== 1 ? 's' : ''} from ${timeAgo}
+                <button onclick="this.parentElement.parentElement.remove()" style="margin-left: 10px;">✕</button>
+            </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentElement) notification.remove();
+        }, 8000);
+    }
+
+    // Helper function to show time ago
+    getTimeAgo(timestamp) {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        if (seconds < 60) return 'just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+        return `${Math.floor(seconds / 86400)} days ago`;
     }
 }
 
