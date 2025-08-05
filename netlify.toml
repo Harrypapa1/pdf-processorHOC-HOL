@@ -1,0 +1,62 @@
+# Netlify deployment configuration for Email Order Processing System
+# This file ensures proper routing and headers for the SPA
+
+[build]
+  # Build settings
+  publish = "."
+  command = "echo 'No build step required - static files only'"
+
+# Redirect rules for SPA routing
+[[redirects]]
+  # Handle settings page
+  from = "/customer-email-management.html"
+  to = "/settings.html"
+  status = 200
+
+  # Handle history page  
+  from = "/order-history.html"
+  to = "/history.html"
+  status = 200
+
+  # Handle any other route - fallback to index
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Performance headers
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Environment variables (set in Netlify dashboard)
+# FIREBASE_API_KEY - Firebase API key
+# FIREBASE_AUTH_DOMAIN - Firebase auth domain
+# FIREBASE_PROJECT_ID - Firebase project ID
+
+# Functions configuration (if needed in future)
+[functions]
+  directory = "netlify/functions"
+
+# Dev server configuration
+[dev]
+  command = "npx serve ."
+  port = 3000
+  publish = "."
