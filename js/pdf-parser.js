@@ -2,11 +2,49 @@
  * PDF Parser Module
  * Handles PDF processing for Standard, Consolidated, and Picking Note templates
  * Contains the IMPROVED picking note parser that extracts 10+ products
+ * NOW ENHANCED with Product Catalog Integration for full product descriptions
  */
 
 class PDFParser {
     constructor() {
         this.productConversionsCache = new Map();
+        this.firebaseConfig = null; // NEW: Reference to FirebaseConfig for product catalog
+    }
+
+    /**
+     * NEW: Set Firebase config instance for product catalog access
+     */
+    setFirebaseConfig(firebaseConfig) {
+        this.firebaseConfig = firebaseConfig;
+    }
+
+    /**
+     * NEW: Enhance product with catalog description
+     */
+    async enhanceProductWithCatalog(product) {
+        if (!this.firebaseConfig || !product.productCode) {
+            return product; // Return as-is if no Firebase config or product code
+        }
+
+        try {
+            // Try to get full description from catalog
+            const catalogDescription = await this.firebaseConfig.getProductDescription(product.productCode);
+            
+            // If we found a better description in catalog, use it
+            if (catalogDescription && catalogDescription !== product.productCode && catalogDescription.length > product.description.length) {
+                console.log(`Enhanced ${product.productCode}: "${product.description}" → "${catalogDescription}"`);
+                product.description = catalogDescription;
+                product.catalogLookup = true; // Mark that we found it in catalog
+            } else {
+                product.catalogLookup = false; // Mark that we used fallback
+            }
+            
+            return product;
+        } catch (error) {
+            console.error('Error enhancing product with catalog:', error);
+            product.catalogLookup = false;
+            return product; // Return original product if enhancement fails
+        }
     }
 
     /**
@@ -29,11 +67,11 @@ class PDFParser {
             const isPickingNote = text.includes('Picking Note');
             
             if (isPickingNote) {
-                return this.parsePickingNote(text, file.name);
+                return await this.parsePickingNote(text, file.name); // NOW ASYNC
             } else if (isConsolidated) {
-                return this.parseConsolidatedOrder(text, file.name);
+                return await this.parseConsolidatedOrder(text, file.name); // NOW ASYNC
             } else {
-                return this.parseStandardOrder(text, file.name);
+                return await this.parseStandardOrder(text, file.name); // NOW ASYNC
             }
         } catch (error) {
             console.error('Error processing PDF:', error);
@@ -43,9 +81,9 @@ class PDFParser {
 
     /**
      * IMPROVED Parse picking note template with much better extraction
-     * This is the CRITICAL function that was improved to extract 10+ products instead of 5
+     * NOW ENHANCED with Product Catalog Integration
      */
-    parsePickingNote(text, filename) {
+    async parsePickingNote(text, filename) { // NOW ASYNC
         const order = {
             filename: filename,
             type: 'Picking Note',
@@ -162,6 +200,8 @@ class PDFParser {
             /^(\d+[A-Z]+)\/?\-?\s+(.{3,}?)\s+(\d+(?:\.\d+)?)\s*(?:Kg\s*)?_*$/
         ];
         
+        const tempProducts = []; // Store products before catalog enhancement
+        
         productLines.forEach(line => {
             console.log('Processing line:', line);
             
@@ -205,7 +245,7 @@ class PDFParser {
                         
                         const product = {
                             quantity: quantity,
-                            description: description,
+                            description: description, // Original description from PDF
                             productCode: productCode,
                             caseSize: caseSize || 'Each',
                             unitPrice: 0, // No pricing in picking notes
@@ -213,7 +253,7 @@ class PDFParser {
                         };
                         
                         console.log('Product extracted:', product);
-                        order.products.push(product);
+                        tempProducts.push(product);
                         productFound = true;
                     }
                 }
@@ -225,7 +265,7 @@ class PDFParser {
         });
         
         // Additional fallback: look for any line with product code pattern
-        if (order.products.length < 5) { // If we have fewer than expected
+        if (tempProducts.length < 5) { // If we have fewer than expected
             console.log('Using fallback extraction...');
             
             const fallbackPattern = /(\d{4,6}[A-Z]{1,5})\s*[\/\-]?\s*(.{10,80}?)\s+(\d+(?:\.\d+)?)/g;
@@ -235,7 +275,7 @@ class PDFParser {
                 const [, productCode, description, quantity] = match;
                 
                 // Check if we already have this product
-                const exists = order.products.find(p => p.productCode === productCode);
+                const exists = tempProducts.find(p => p.productCode === productCode);
                 if (!exists && parseFloat(quantity) > 0 && parseFloat(quantity) < 1000) {
                     const product = {
                         quantity: parseFloat(quantity),
@@ -247,9 +287,17 @@ class PDFParser {
                     };
                     
                     console.log('Fallback product extracted:', product);
-                    order.products.push(product);
+                    tempProducts.push(product);
                 }
             }
+        }
+        
+        // NEW: Enhance all products with catalog descriptions
+        console.log(`Enhancing ${tempProducts.length} products with catalog descriptions...`);
+        
+        for (const product of tempProducts) {
+            const enhancedProduct = await this.enhanceProductWithCatalog(product);
+            order.products.push(enhancedProduct);
         }
         
         console.log(`Final product count: ${order.products.length}`);
@@ -282,8 +330,9 @@ class PDFParser {
 
     /**
      * Parse consolidated order template
+     * NOW ENHANCED with Product Catalog Integration
      */
-    parseConsolidatedOrder(text, filename) {
+    async parseConsolidatedOrder(text, filename) { // NOW ASYNC
         const order = {
             filename: filename,
             type: 'Consolidated',
@@ -365,7 +414,7 @@ class PDFParser {
             while ((match = pattern.exec(text)) !== null) {
                 const product = {
                     quantity: parseFloat(match[1]),
-                    description: match[2].trim(),
+                    description: match[2].trim(), // Original description from PDF  
                     productCode: match[3].trim(),
                     caseSize: match[4].trim(),
                     unitPrice: parseFloat(match[5]),
@@ -373,8 +422,10 @@ class PDFParser {
                 };
                 
                 if (product.quantity > 0 && product.productCode && product.unitPrice > 0) {
-                    order.products.push(product);
-                    order.total += product.netPrice;
+                    // NEW: Enhance with catalog description
+                    const enhancedProduct = await this.enhanceProductWithCatalog(product);
+                    order.products.push(enhancedProduct);
+                    order.total += enhancedProduct.netPrice;
                 }
             }
             
@@ -401,9 +452,10 @@ class PDFParser {
     }
 
     /**
-     * Parse standard order template  
+     * Parse standard order template
+     * NOW ENHANCED with Product Catalog Integration
      */
-    parseStandardOrder(text, filename) {
+    async parseStandardOrder(text, filename) { // NOW ASYNC
         const order = {
             filename: filename,
             type: 'Standard',
@@ -442,14 +494,17 @@ class PDFParser {
         while ((match = tablePattern.exec(text)) !== null) {
             const product = {
                 quantity: parseFloat(match[1]),
-                description: match[2].trim(),
+                description: match[2].trim(), // Original description from PDF
                 productCode: match[3].trim(),
                 caseSize: match[4].trim(),
                 unitPrice: parseFloat(match[5]),
                 netPrice: parseFloat(match[6])
             };
-            order.products.push(product);
-            order.total += product.netPrice;
+            
+            // NEW: Enhance with catalog description
+            const enhancedProduct = await this.enhanceProductWithCatalog(product);
+            order.products.push(enhancedProduct);
+            order.total += enhancedProduct.netPrice;
         }
         
         return order;
