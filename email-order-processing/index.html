@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Order Processing System</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+    
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="nav-links">
+                <a href="settings.html" class="nav-link">Manage Settings</a>
+                <a href="history.html" class="nav-link">Order History</a>
+            </div>
+            <h1>📧 Email Order Processing</h1>
+            <p>Transform PDF orders into Excel files for Freshware</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- File Upload Section -->
+            <div class="upload-section" id="uploadArea">
+                <div class="upload-icon">📎</div>
+                <div class="upload-text">
+                    <h3>Drop PDF files here or click to browse</h3>
+                    <p>Files will be added to the processing queue below</p>
+                </div>
+                <input type="file" id="fileInput" class="file-input" multiple accept=".pdf">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    Choose Files
+                </button>
+            </div>
+
+            <!-- Processing Queue Section -->
+            <div class="queue-section" id="queueSection">
+                <div class="queue-header">
+                    <h3>📋 Processing Queue</h3>
+                    <span class="queue-count" id="queueCount">0 files</span>
+                </div>
+                
+                <div class="queue-list" id="queueList">
+                    <!-- Queue items will be populated here -->
+                </div>
+                
+                <div class="queue-actions">
+                    <button class="btn-process-all" id="processAllBtn" onclick="processAllQueuedFiles()">
+                        🚀 Process All Orders
+                    </button>
+                    <button class="btn-clear-queue" onclick="clearQueue()">
+                        🗑️ Clear Queue
+                    </button>
+                </div>
+            </div>
+
+            <!-- Processing Section -->
+            <div class="processing-section" id="processingSection">
+                <h3>🔄 Processing Orders...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="processingStatus">Initializing...</p>
+            </div>
+            
+            <!-- PDF Viewer Section -->
+            <div class="pdf-viewer-section" id="pdfViewerSection">
+                <div class="multi-file-tabs" id="fileTabsContainer"></div>
+                
+                <div class="viewer-container">
+                    <!-- PDF Viewer -->
+                    <div class="pdf-viewer">
+                        <div class="pdf-viewer-header">
+                            <h3 id="currentFileName">PDF Document</h3>
+                            <p style="color: #7f8c8d; font-size: 0.9rem;">Original order document</p>
+                        </div>
+                        <div class="pdf-canvas-container">
+                            <canvas id="pdfCanvas" class="pdf-canvas"></canvas>
+                        </div>
+                        <div class="pdf-controls">
+                            <button class="pdf-control-btn" id="prevPageBtn">← Prev</button>
+                            <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                            <button class="pdf-control-btn" id="nextPageBtn">Next →</button>
+                            <div style="margin: 0 10px; border-left: 1px solid #e3e8ef; height: 20px;"></div>
+                            <button class="pdf-control-btn" id="fitWidthBtn">Fit Width</button>
+                            <button class="pdf-control-btn" onclick="zoomOut()">Zoom -</button>
+                            <span class="zoom-info" id="zoomInfo">100%</span>
+                            <button class="pdf-control-btn" onclick="zoomIn()">Zoom +</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Extracted Data -->
+                    <div class="extracted-data">
+                        <div class="extracted-data-header">
+                            <div>
+                                <h3>📊 Extracted Order Data</h3>
+                                <div style="font-size: 0.8rem; color: #7f8c8d; margin-top: 10px;">
+                                    💡 Click "Edit Data" to modify PO number, dates, quantities, SKU codes, and case sizes<br>
+                                    📦 Decimal quantities are automatically converted using your product settings<br>
+                                    🔴 Red highlighting indicates problematic decimals that need attention<br>
+                                    📋 Case sizes: Select "Each" (E), "Kilo" (K), or "Box" (B) to control export SKU suffixes
+                                </div>
+                            </div>
+                            <div>
+                                <button class="edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()">
+                                    ✏️ Edit Data
+                                </button>
+                                <button class="save-changes-btn" id="saveChangesBtn" onclick="saveChanges()" style="display: none;">
+                                    💾 Save Changes
+                                </button>
+                                <span class="changes-indicator" id="changesIndicator" style="display: none;">● Changes made</span>
+                            </div>
+                        </div>
+
+                        <!-- Conversion Status -->
+                        <div class="conversion-status" id="conversionStatus" style="display: none;">
+                            <h4>🧮 Decimal Quantity Conversions</h4>
+                            <div class="conversion-stats" id="conversionStats">
+                                <div class="conversion-stat success">
+                                    <div class="number" id="convertedCount">0</div>
+                                    <div>Converted</div>
+                                </div>
+                                <div class="conversion-stat warning">
+                                    <div class="number" id="warningCount">0</div>
+                                    <div>Need Attention</div>
+                                </div>
+                                <div class="conversion-stat">
+                                    <div class="number" id="wholeCount">0</div>
+                                    <div>Whole Numbers</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="extracted-data-body">
+                            <table class="products-table" id="productsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Qty <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
+                                        <th>Description</th>
+                                        <th>SKU <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
+                                        <th>Case <span style="color: #3498db; font-size: 0.7rem;">✏️</span></th>
+                                        <th>Unit £</th>
+                                        <th>Net £</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                            Upload a PDF to see extracted product data
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Order Summary -->
+                            <div class="order-summary" id="orderSummary">
+                                <div class="order-summary-header">📊 Order Summary</div>
+                                <div><strong>Type:</strong> <span id="orderType">-</span></div>
+                                <div><strong>PO Number:</strong> <input class="editable-field" id="orderPO" value="-" onchange="markAsChanged()" disabled></div>
+                                <div><strong>Customer:</strong> <span id="orderCustomer">-</span></div>
+                                <div><strong>Order Date:</strong> <input class="editable-field" id="orderDate" type="date" onchange="markAsChanged()" disabled></div>
+                                <div><strong>Delivery Date:</strong> <input class="editable-field" id="deliveryDate" type="date" onchange="markAsChanged()" disabled></div>
+                                <div><strong>Total:</strong> <span id="orderTotal">£0.00</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results Summary Section -->
+            <div class="results-section" id="resultsSection">
+                <!-- Export Section -->
+                <div class="export-section">
+                    <!-- Approve Current Order Button -->
+                    <div style="margin-bottom: 20px;">
+                        <button class="approve-order-btn" id="approveOrderBtn" onclick="approveCurrentOrder()" style="display: none;">
+                            ✅ Approve Current Order
+                        </button>
+                    </div>
+                    
+                    <h3>📊 Ready to Export</h3>
+                    <p id="exportSummary">No orders approved for export yet - approve orders one by one to include them in export</p>
+                    <button class="btn btn-success" id="exportBtn" onclick="exportToExcel()" style="display: none;">
+                        Download Excel File
+                    </button>
+                    
+                    <!-- Approved Orders List -->
+                    <div class="approved-orders-list" id="approvedOrdersList" style="display: none;">
+                        <h3>✅ Approved Orders - Ready for Export</h3>
+                        <div id="approvedOrdersContainer">
+                            <!-- Approved orders will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Modules -->
+    <script src="js/config.js"></script>
+    <script src="js/conversion-engine.js"></script>
+    <script src="js/pdf-parser.js"></script>
+    <script src="js/export-manager.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

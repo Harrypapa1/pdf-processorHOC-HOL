@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Email & Product Management - HOC Order Processing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .password-section {
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+
+        .password-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .password-input {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 300px;
+            margin: 10px;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .main-content {
+            padding: 30px;
+            display: none;
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 5px solid #3498db;
+        }
+
+        .section.product-section {
+            border-left-color: #e67e22;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .product-form-row {
+            display: grid;
+            grid-template-columns: 2fr 2fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .data-table tr:nth-child(even):hover {
+            background: #f0f0f0;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .customer-code {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .product-code {
+            font-weight: bold;
+            color: #e67e22;
+            font-family: 'Courier New', monospace;
+        }
+
+        .email-cell {
+            color: #3498db;
+            font-family: 'Courier New', monospace;
+        }
+
+        .weight-cell {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .info-message {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .bulk-area {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .bulk-area:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .stat-number.product-stat {
+            color: #e67e22;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .navigation {
+            text-align: center;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .nav-link {
+            color: #3498db;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+
+        .nav-link:hover {
+            color: #2980b9;
+        }
+
+        .conversion-example {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .conversion-example h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .conversion-example p {
+            color: #856404;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e3e8ef;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 25px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            margin-right: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #7f8c8d;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background: #e3e8ef;
+            color: #2c3e50;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .product-form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                margin-right: 0;
+                margin-bottom: 5px;
+                border-radius: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Customer Email & Product Management</h1>
+            <p>Manage customer email mappings and product decimal conversions</p>
+        </div>
+
+        <div class="password-section" id="passwordSection">
+            <h2>🔐 Access Required</h2>
+            <p>Enter password to manage customer emails and product conversions</p>
+            <div>
+                <input type="password" id="passwordInput" class="password-input" placeholder="Enter password">
+                <br>
+                <button onclick="checkPassword()" class="btn">Access Management</button>
+            </div>
+            <p id="passwordError" class="error-message" style="display: none;"></p>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalEmails">0</div>
+                    <div class="stat-label">Customer Emails</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number product-stat" id="totalProducts">0</div>
+                    <div class="stat-label">Product Conversions</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('emails')">📧 Customer Emails</button>
+                <button class="tab" onclick="switchTab('products')">📦 Product Conversions</button>
+            </div>
+
+            <!-- Customer Emails Tab -->
+            <div id="emailsTab" class="tab-content active">
+                <!-- Single Customer Email Entry -->
+                <div class="section">
+                    <h2>📧 Add Customer Email</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerCode">Customer Code</label>
+                            <input type="text" id="customerCode" class="form-control" placeholder="e.g., 07BELLA" style="text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerName">Customer Name</label>
+                            <input type="text" id="customerName" class="form-control" placeholder="e.g., BELLA_KITCHEN">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerEmail">Email Address</label>
+                            <input type="email" id="customerEmail" class="form-control" placeholder="e.g., orders@bella.com">
+                        </div>
+                    </div>
+                    <button onclick="addCustomerEmail()" class="btn btn-success">Add Customer Email</button>
+                </div>
+
+                <!-- Bulk Email Import -->
+                <div class="section">
+                    <h2>📋 Bulk Email Import</h2>
+                    <div class="info-message">
+                        <strong>CSV Format:</strong> Paste CSV data with columns: CustomerCode, CustomerName, Email<br>
+                        <strong>Example:</strong> 07BELLA,BELLA_KITCHEN,orders@bella.com
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkEmailData">CSV Data</label>
+                        <textarea id="bulkEmailData" class="bulk-area" placeholder="CustomerCode,CustomerName,Email&#10;07BELLA,BELLA_KITCHEN,orders@bella.com&#10;13RREST,RIVER_KITCHEN,orders@river.com"></textarea>
+                    </div>
+                    <button onclick="bulkImportEmails()" class="btn btn-success">Import Email Mappings</button>
+                </div>
+
+                <!-- Current Email Mappings -->
+                <div class="section">
+                    <h2>📊 Current Email Mappings</h2>
+                    <div style="margin-bottom: 15px;">
+                        <button onclick="exportEmails('csv')" class="btn btn-secondary">Export CSV</button>
+                        <button onclick="exportEmails('json')" class="btn btn-secondary">Export JSON</button>
+                        <button onclick="refreshEmailData()" class="btn">Refresh Data</button>
+                    </div>
+                    <table class="data-table" id="emailMappingsTable">
+                        <thead>
+                            <tr>
+                                <th>Customer Code</th>
+                                <th>Customer Name</th>
+                                <th>Email Address</th>
+                                <th>Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emailMappingsBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                    Loading email mappings...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Product Conversions Tab -->
+            <div id="productsTab" class="tab-content">
+                <!-- Conversion Example -->
+                <div class="conversion-example">
+                    <h4>🧮 How Product Conversions Work</h4>
+                    <p><strong>Problem:</strong> 0.5kg STR → Freshware rounds to 0 ❌</p>
+                    <p><strong>Solution:</strong> 0.5kg STR (500g each) → 1 STRE ✅</p>
+                    <p><strong>Example:</strong> 1.5kg GI (250g each) → 6 GIE ✅</p>
+                </div>
+
+                <!-- Add Product Conversion -->
+                <div class="section product-section">
+                    <h2>📦 Add Product Conversion</h2>
+                    <div class="product-form-row">
+                        <div class="form-group">
+                            <label for="productCode">Product Code</label>
+                            <input type="text" id="productCode" class="form-control" placeholder="e.g., STR" style="text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label for="productName">Product Name</label>
+                            <input type="text" id="productName" class="form-control" placeholder="e.g., Strawberries">
+                        </div>
+                        <div class="form-group">
+                            <label for="eachWeight">Each Weight (grams)</label>
+                            <input type="number" id="eachWeight" class="form-control" placeholder="e.g., 500" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button onclick="addProductConversion()" class="btn btn-success" style="width: 100%;">Add Conversion</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Product Import -->
+                <div class="section product-section">
+                    <h2>📋 Bulk Product Import</h2>
+                    <div class="info-message">
+                        <strong>CSV Format:</strong> ProductCode, ProductName, EachWeightGrams<br>
+                        <strong>Example:</strong> STR,Strawberries,500
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkProductData">CSV Data</label>
+                        <textarea id="bulkProductData" class="bulk-area" placeholder="ProductCode,ProductName,EachWeightGrams&#10;STR,Strawberries,500&#10;GI,Ginger,250"></textarea>
+                    </div>
+                    <button onclick="bulkImportProducts()" class="btn btn-success">Import Product Conversions</button>
+                </div>
+
+                <!-- Current Product Conversions -->
+                <div class="section product-section">
+                    <h2>📊 Current Product Conversions</h2>
+                    <div style="margin-bottom: 15px;">
+                        <button onclick="exportProducts('csv')" class="btn btn-secondary">Export CSV</button>
+                        <button onclick="exportProducts('json')" class="btn btn-secondary">Export JSON</button>
+                        <button onclick="refreshProductData()" class="btn">Refresh Data</button>
+                    </div>
+                    <table class="data-table" id="productConversionsTable">
+                        <thead>
+                            <tr>
+                                <th>Product Code</th>
+                                <th>Product Name</th>
+                                <th>Each Weight</th>
+                                <th>Example Conversion</th>
+                                <th>Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productConversionsBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                    Loading product conversions...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <a href="index.html" class="nav-link">← Back to Order Processing</a>
+            <a href="history.html" class="nav-link">Order History</a>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeNUflDD7eEiZS9ZE5Z1WwiAMP8Nx4krY",
+            authDomain: "email-order-system.firebaseapp.com",
+            projectId: "email-order-system",
+            storageBucket: "email-order-system.firebasestorage.app",
+            messagingSenderId: "148310260005",
+            appId: "1:148310260005:web:65014f7b35ebd7e46ec2cc"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let passwordAttempts = 0;
+        const maxAttempts = 3;
+        const correctPassword = 'hoc2025';
+        let currentEmailMappings = [];
+        let currentProductConversions = [];
+
+        function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            const errorElement = document.getElementById('passwordError');
+            
+            if (password === correctPassword) {
+                document.getElementById('passwordSection').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                loadEmailMappings();
+                loadProductConversions();
+            } else {
+                passwordAttempts++;
+                if (passwordAttempts >= maxAttempts) {
+                    alert('Too many failed attempts. Redirecting to main page.');
+                    window.location.href = 'index.html';
+                } else {
+                    errorElement.textContent = `Incorrect password. ${maxAttempts - passwordAttempts} attempts remaining.`;
+                    errorElement.style.display = 'block';
+                    document.getElementById('passwordInput').value = '';
+                }
+            }
+        }
+
+        // Allow Enter key to submit password
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Email Management Functions
+        async function loadEmailMappings() {
+            try {
+                const snapshot = await db.collection('customerEmails')
+                    .orderBy('customerCode', 'asc')
+                    .get();
+                
+                currentEmailMappings = [];
+                snapshot.forEach(doc => {
+                    currentEmailMappings.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                displayEmailMappings();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading email mappings:', error);
+                showMessage('Error loading email mappings: ' + error.message, 'error');
+            }
+        }
+
+        function displayEmailMappings() {
+            const tbody = document.getElementById('emailMappingsBody');
+            tbody.innerHTML = '';
+            
+            if (currentEmailMappings.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            No customer email mappings found. Add some using the form above.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            currentEmailMappings.forEach(mapping => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td class="customer-code">${mapping.customerCode}</td>
+                    <td>${mapping.customerName || 'N/A'}</td>
+                    <td class="email-cell">${mapping.email}</td>
+                    <td>${mapping.createdAt ? new Date(mapping.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteEmailMapping('${mapping.id}')">Delete</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function addCustomerEmail() {
+            const code = document.getElementById('customerCode').value.trim().toUpperCase();
+            const name = document.getElementById('customerName').value.trim();
+            const email = document.getElementById('customerEmail').value.trim().toLowerCase();
+            
+            if (!code || !email) {
+                showMessage('Customer code and email are required!', 'error');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                showMessage('Please enter a valid email address!', 'error');
+                return;
+            }
+            
+            try {
+                // Check if customer code already exists
+                const existingDoc = await db.collection('customerEmails')
+                    .where('customerCode', '==', code)
+                    .get();
+                
+                if (!existingDoc.empty) {
+                    if (confirm(`Customer code ${code} already exists. Do you want to update it?`)) {
+                        const docId = existingDoc.docs[0].id;
+                        await db.collection('customerEmails').doc(docId).update({
+                            customerName: name,
+                            email: email,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        showMessage(`Customer ${code} updated successfully!`, 'success');
+                    }
+                } else {
+                    await db.collection('customerEmails').add({
+                        customerCode: code,
+                        customerName: name,
+                        email: email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showMessage(`Customer ${code} added successfully!`, 'success');
+                }
+                
+                // Clear form
+                document.getElementById('customerCode').value = '';
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+                
+                // Reload data
+                loadEmailMappings();
+                
+            } catch (error) {
+                console.error('Error adding customer email:', error);
+                showMessage('Error adding customer email: ' + error.message, 'error');
+            }
+        }
+
+        async function bulkImportEmails() {
+            const csvData = document.getElementById('bulkEmailData').value.trim();
+            
+            if (!csvData) {
+                showMessage('Please paste CSV data first!', 'error');
+                return;
+            }
+            
+            try {
+                const lines = csvData.split('\n').filter(line => line.trim());
+                const batch = db.batch();
+                let addedCount = 0;
+                let updatedCount = 0;
+                
+                for (const line of lines) {
+                    const [code, name, email] = line.split(',').map(field => field.trim());
+                    
+                    if (!code || !email) continue;
+                    
+                    const upperCode = code.toUpperCase();
+                    const lowerEmail = email.toLowerCase();
+                    
+                    // Check if customer code already exists
+                    const existingDoc = await db.collection('customerEmails')
+                        .where('customerCode', '==', upperCode)
+                        .get();
+                    
+                    if (!existingDoc.empty) {
+                        const docRef = db.collection('customerEmails').doc(existingDoc.docs[0].id);
+                        batch.update(docRef, {
+                            customerName: name || '',
+                            email: lowerEmail,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        updatedCount++;
+                    } else {
+                        const docRef = db.collection('customerEmails').doc();
+                        batch.set(docRef, {
+                            customerCode: upperCode,
+                            customerName: name || '',
+                            email: lowerEmail,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        addedCount++;
+                    }
+                }
+                
+                await batch.commit();
+                showMessage(`Bulk import completed! Added: ${addedCount}, Updated: ${updatedCount}`, 'success');
+                
+                // Clear form
+                document.getElementById('bulkEmailData').value = '';
+                
+                // Reload data
+                loadEmailMappings();
+                
+            } catch (error) {
+                console.error('Error bulk importing emails:', error);
+                showMessage('Error bulk importing emails: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteEmailMapping(docId) {
+            const mapping = currentEmailMappings.find(m => m.id === docId);
+            if (!mapping) return;
+            
+            if (confirm(`Are you sure you want to delete ${mapping.customerCode} (${mapping.email})?`)) {
+                try {
+                    await db.collection('customerEmails').doc(docId).delete();
+                    showMessage(`Customer ${mapping.customerCode} deleted successfully!`, 'success');
+                    loadEmailMappings();
+                } catch (error) {
+                    console.error('Error deleting email mapping:', error);
+                    showMessage('Error deleting email mapping: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function exportEmails(format) {
+            if (currentEmailMappings.length === 0) {
+                showMessage('No email mappings to export!', 'error');
+                return;
+            }
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            
+            if (format === 'csv') {
+                const csvContent = [
+                    'CustomerCode,CustomerName,Email,CreatedAt',
+                    ...currentEmailMappings.map(mapping => 
+                        `${mapping.customerCode},"${mapping.customerName || ''}",${mapping.email},${mapping.createdAt ? new Date(mapping.createdAt.seconds * 1000).toISOString() : ''}`
+                    )
+                ].join('\n');
+                
+                downloadFile(csvContent, `customer-emails-${timestamp}.csv`, 'text/csv');
+            } else if (format === 'json') {
+                const jsonContent = JSON.stringify(currentEmailMappings, null, 2);
+                downloadFile(jsonContent, `customer-emails-${timestamp}.json`, 'application/json');
+            }
+        }
+
+        function refreshEmailData() {
+            loadEmailMappings();
+            showMessage('Email mappings refreshed!', 'success');
+        }
+
+        // Product Conversion Functions
+        async function loadProductConversions() {
+            try {
+                const snapshot = await db.collection('productConversions')
+                    .orderBy('productCode', 'asc')
+                    .get();
+                
+                currentProductConversions = [];
+                snapshot.forEach(doc => {
+                    currentProductConversions.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                displayProductConversions();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading product conversions:', error);
+                showMessage('Error loading product conversions: ' + error.message, 'error');
+            }
+        }
+
+        function displayProductConversions() {
+            const tbody = document.getElementById('productConversionsBody');
+            tbody.innerHTML = '';
+            
+            if (currentProductConversions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            No product conversions found. Add some using the form above.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            currentProductConversions.forEach(product => {
+                const row = tbody.insertRow();
+                const exampleConversion = `0.5kg ${product.productCode} → ${Math.round((0.5 * 1000) / product.eachWeight * 10) / 10} ${product.productCode}E`;
+                
+                row.innerHTML = `
+                    <td class="product-code">${product.productCode}</td>
+                    <td>${product.productName || 'N/A'}</td>
+                    <td class="weight-cell">${product.eachWeight}g</td>
+                    <td style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #27ae60;">${exampleConversion}</td>
+                    <td>${product.createdAt ? new Date(product.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteProductConversion('${product.id}')">Delete</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function addProductConversion() {
+            const code = document.getElementById('productCode').value.trim().toUpperCase();
+            const name = document.getElementById('productName').value.trim();
+            const weight = parseInt(document.getElementById('eachWeight').value);
+            
+            if (!code || !weight || weight <= 0) {
+                showMessage('Product code and valid weight are required!', 'error');
+                return;
+            }
+            
+            try {
+                // Check if product code already exists
+                const existingDoc = await db.collection('productConversions')
+                    .where('productCode', '==', code)
+                    .get();
+                
+                if (!existingDoc.empty) {
+                    if (confirm(`Product code ${code} already exists. Do you want to update it?`)) {
+                        const docId = existingDoc.docs[0].id;
+                        await db.collection('productConversions').doc(docId).update({
+                            productName: name,
+                            eachWeight: weight,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        showMessage(`Product ${code} updated successfully!`, 'success');
+                    }
+                } else {
+                    await db.collection('productConversions').add({
+                        productCode: code,
+                        productName: name,
+                        eachWeight: weight,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showMessage(`Product ${code} added successfully!`, 'success');
+                }
+                
+                // Clear form
+                document.getElementById('productCode').value = '';
+                document.getElementById('productName').value = '';
+                document.getElementById('eachWeight').value = '';
+                
+                // Reload data
+                loadProductConversions();
+                
+            } catch (error) {
+                console.error('Error adding product conversion:', error);
+                showMessage('Error adding product conversion: ' + error.message, 'error');
+            }
+        }
+
+        async function bulkImportProducts() {
+            const csvData = document.getElementById('bulkProductData').value.trim();
+            
+            if (!csvData) {
+                showMessage('Please paste CSV data first!', 'error');
+                return;
+            }
+            
+            try {
+                const lines = csvData.split('\n').filter(line => line.trim());
+                const batch = db.batch();
+                let addedCount = 0;
+                let updatedCount = 0;
+                
+                for (const line of lines) {
+                    const [code, name, weight] = line.split(',').map(field => field.trim());
+                    
+                    if (!code || !weight) continue;
+                    
+                    const upperCode = code.toUpperCase();
+                    const weightNum = parseInt(weight);
+                    
+                    if (weightNum <= 0) continue;
+                    
+                    // Check if product code already exists
+                    const existingDoc = await db.collection('productConversions')
+                        .where('productCode', '==', upperCode)
+                        .get();
+                    
+                    if (!existingDoc.empty) {
+                        const docRef = db.collection('productConversions').doc(existingDoc.docs[0].id);
+                        batch.update(docRef, {
+                            productName: name || '',
+                            eachWeight: weightNum,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        updatedCount++;
+                    } else {
+                        const docRef = db.collection('productConversions').doc();
+                        batch.set(docRef, {
+                            productCode: upperCode,
+                            productName: name || '',
+                            eachWeight: weightNum,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        addedCount++;
+                    }
+                }
+                
+                await batch.commit();
+                showMessage(`Bulk import completed! Added: ${addedCount}, Updated: ${updatedCount}`, 'success');
+                
+                // Clear form
+                document.getElementById('bulkProductData').value = '';
+                
+                // Reload data
+                loadProductConversions();
+                
+            } catch (error) {
+                console.error('Error bulk importing products:', error);
+                showMessage('Error bulk importing products: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteProductConversion(docId) {
+            const product = currentProductConversions.find(p => p.id === docId);
+            if (!product) return;
+            
+            if (confirm(`Are you sure you want to delete ${product.productCode} (${product.eachWeight}g)?`)) {
+                try {
+                    await db.collection('productConversions').doc(docId).delete();
+                    showMessage(`Product ${product.productCode} deleted successfully!`, 'success');
+                    loadProductConversions();
+                } catch (error) {
+                    console.error('Error deleting product conversion:', error);
+                    showMessage('Error deleting product conversion: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function exportProducts(format) {
+            if (currentProductConversions.length === 0) {
+                showMessage('No product conversions to export!', 'error');
+                return;
+            }
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            
+            if (format === 'csv') {
+                const csvContent = [
+                    'ProductCode,ProductName,EachWeightGrams,CreatedAt',
+                    ...currentProductConversions.map(product => 
+                        `${product.productCode},"${product.productName || ''}",${product.eachWeight},${product.createdAt ? new Date(product.createdAt.seconds * 1000).toISOString() : ''}`
+                    )
+                ].join('\n');
+                
+                downloadFile(csvContent, `product-conversions-${timestamp}.csv`, 'text/csv');
+            } else if (format === 'json') {
+                const jsonContent = JSON.stringify(currentProductConversions, null, 2);
+                downloadFile(jsonContent, `product-conversions-${timestamp}.json`, 'application/json');
+            }
+        }
+
+        function refreshProductData() {
+            loadProductConversions();
+            showMessage('Product conversions refreshed!', 'success');
+        }
+
+        // Utility Functions
+        function updateStats() {
+            document.getElementById('totalEmails').textContent = currentEmailMappings.length;
+            document.getElementById('totalProducts').textContent = currentProductConversions.length;
+        }
+
+        function showMessage(message, type) {
+            // Remove existing messages
+            document.querySelectorAll('.success-message, .error-message, .info-message').forEach(el => {
+                if (!el.classList.contains('info-message') || type !== 'info') {
+                    el.remove();
+                }
+            });
+            
+            const messageEl = document.createElement('div');
+            messageEl.className = `${type}-message`;
+            messageEl.textContent = message;
+            
+            const firstSection = document.querySelector('.section');
+            firstSection.parentNode.insertBefore(messageEl, firstSection);
+            
+            // Auto-remove success/error messages after 5 seconds
+            if (type !== 'info') {
+                setTimeout(() => messageEl.remove(), 5000);
+            }
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Auto uppercase customer and product codes
+        document.getElementById('customerCode').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        document.getElementById('productCode').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>
