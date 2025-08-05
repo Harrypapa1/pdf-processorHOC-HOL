@@ -5,19 +5,37 @@
 
 class OrderProcessingApp {
     constructor() {
-        // Initialize all modules
-        this.firebaseConfig = new FirebaseConfig();
-        this.conversionEngine = new ConversionEngine();
-        this.uiManager = new UIManager(this.conversionEngine);
-        this.exportManager = new ExportManager(this.firebaseConfig, this.conversionEngine);
-        this.pdfParser = new PDFParser();
+        console.log('🔍 APP: OrderProcessingApp constructor starting...');
         
-        // Application state
-        this.processedOrders = [];
-        this.approvedOrders = [];
-        
-        // Initialize the application
-        this.init();
+        try {
+            // Initialize all modules
+            console.log('🔍 APP: Creating FirebaseConfig...');
+            this.firebaseConfig = new FirebaseConfig();
+            
+            console.log('🔍 APP: Creating ConversionEngine...');
+            this.conversionEngine = new ConversionEngine();
+            
+            console.log('🔍 APP: Creating UIManager...');
+            this.uiManager = new UIManager(this.conversionEngine);
+            
+            console.log('🔍 APP: Creating ExportManager...');
+            this.exportManager = new ExportManager(this.firebaseConfig, this.conversionEngine);
+            
+            console.log('🔍 APP: Creating PDFParser...');
+            this.pdfParser = new PDFParser();
+            
+            // Application state
+            this.processedOrders = [];
+            this.approvedOrders = [];
+            
+            console.log('🔍 APP: All modules created, calling init()...');
+            // Initialize the application
+            this.init();
+            
+        } catch (error) {
+            console.error('🚨 APP: Error in constructor:', error);
+            alert('Error starting application: ' + error.message);
+        }
     }
 
     /**
@@ -354,8 +372,13 @@ class OrderProcessingApp {
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing Order Processing App...');
-    window.orderProcessingApp = new OrderProcessingApp();
+    console.log('🔍 APP: DOM loaded, initializing Order Processing App...');
+    try {
+        window.orderProcessingApp = new OrderProcessingApp();
+        console.log('🔍 APP: OrderProcessingApp created successfully');
+    } catch (error) {
+        console.error('🚨 APP: Error creating OrderProcessingApp:', error);
+    }
 });
 
 // Export for global access
