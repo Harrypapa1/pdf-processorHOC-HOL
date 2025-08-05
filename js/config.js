@@ -233,13 +233,28 @@ class FirebaseConfig {
                     name: 'simple', 
                     test: (catalogDesc) => {
                         const catalog = catalogDesc.toLowerCase();
+                        
+                        // PRIORITY: Handle herbs - match to base herb name, NOT "dust" versions
+                        if (searchDesc === 'herb rosemary' || searchDesc === 'rosemary') {
+                            return catalog === 'rosemary'; // Match R, not HM107E (Rosemary Dust)
+                        }
+                        if (searchDesc === 'herb thyme' || searchDesc === 'thyme') {
+                            return catalog === 'thyme'; // Match TH, not Thyme Dust
+                        }
+                        if (searchDesc === 'herb dill' || searchDesc === 'dill') {
+                            return catalog === 'dill'; // Match plain dill
+                        }
+                        
                         // Handle specific mappings for your catalog
                         if (searchDesc.includes('kiwi')) return catalog === 'kiwi';
                         if (searchDesc.includes('mango')) return catalog === 'mango';
                         if (searchDesc.includes('easy peeler')) return catalog.includes('easy peeler');
-                        if (searchDesc.includes('rosemary')) return catalog === 'rosemary dust' || catalog.includes('rosemary');
-                        if (searchDesc.includes('thyme')) return catalog === 'thyme dust' || catalog.includes('thyme');
-                        if (searchDesc.includes('dill')) return catalog.includes('dill');
+                        
+                        // Explicitly exclude "dust" versions for herbs
+                        if ((searchDesc.includes('rosemary') || searchDesc.includes('thyme')) && catalog.includes('dust')) {
+                            return false;
+                        }
+                        
                         return false;
                     }
                 },
@@ -249,6 +264,12 @@ class FirebaseConfig {
                     name: 'keywords',
                     test: (catalogDesc) => {
                         const catalog = catalogDesc.toLowerCase();
+                        
+                        // Skip "dust" versions for herb searches
+                        if ((searchDesc.includes('rosemary') || searchDesc.includes('thyme')) && catalog.includes('dust')) {
+                            return false;
+                        }
+                        
                         const keywords = searchDesc.split(/\s+/).filter(word => word.length > 2);
                         const matches = keywords.filter(keyword => catalog.includes(keyword));
                         
