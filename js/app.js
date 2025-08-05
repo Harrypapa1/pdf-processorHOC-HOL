@@ -45,13 +45,16 @@ class OrderProcessingApp {
         try {
             console.log('Initializing Order Processing Application...');
             
-            // Load all Firebase data
+            // Load all Firebase data (now includes product catalog)
             await this.firebaseConfig.initializeAllData();
             
             // Set caches in other modules
             const caches = this.firebaseConfig.getCaches();
             this.conversionEngine.setProductConversionsCache(caches.productConversionsCache);
             this.pdfParser.setProductConversionsCache(caches.productConversionsCache);
+            
+            // NEW: Connect PDFParser to FirebaseConfig for product catalog access
+            this.pdfParser.setFirebaseConfig(this.firebaseConfig);
             
             // Setup global functions for HTML template
             this.setupGlobalFunctions();
@@ -350,7 +353,7 @@ class OrderProcessingApp {
     }
 
     /**
-     * Refresh all data from Firebase
+     * Refresh all data from Firebase - UPDATED
      */
     async refreshData() {
         try {
@@ -360,6 +363,9 @@ class OrderProcessingApp {
             const caches = this.firebaseConfig.getCaches();
             this.conversionEngine.setProductConversionsCache(caches.productConversionsCache);
             this.pdfParser.setProductConversionsCache(caches.productConversionsCache);
+            
+            // NEW: Reconnect PDFParser to FirebaseConfig after refresh
+            this.pdfParser.setFirebaseConfig(this.firebaseConfig);
             
             console.log('Data refreshed successfully');
             return true;
