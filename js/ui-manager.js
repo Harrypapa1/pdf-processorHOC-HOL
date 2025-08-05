@@ -84,9 +84,17 @@ class UIManager {
      * Restore queue on page load
      */
     async restoreQueueOnLoad() {
+        console.log('🔍 RESTORE: Starting restoration check...');
+        console.log('🔍 RESTORE: Has saved queue?', this.queuePersistence.hasSavedQueue());
+        
         if (this.queuePersistence.hasSavedQueue()) {
+            console.log('🔍 RESTORE: Calling restoreQueue()...');
             const restoredFiles = await this.queuePersistence.restoreQueue();
+            console.log('🔍 RESTORE: Got files:', restoredFiles.length);
+            
             if (restoredFiles.length > 0) {
+                console.log('🔍 RESTORE: Adding to fileQueue. Current length:', this.fileQueue.length);
+                
                 // Add restored files to queue
                 restoredFiles.forEach(file => {
                     const queueItem = {
@@ -97,9 +105,13 @@ class UIManager {
                     this.fileQueue.push(queueItem);
                 });
                 
+                console.log('🔍 RESTORE: New fileQueue length:', this.fileQueue.length);
+                
                 this.updateQueueDisplay();
                 this.updateWarningStatus();
             }
+        } else {
+            console.log('🔍 RESTORE: No saved queue found');
         }
     }
 
