@@ -8,8 +8,10 @@ class FirebaseConfig {
         this.db = null;
         this.emailMappingsCache = new Map();
         this.productConversionsCache = new Map();
+        this.productCatalogCache = new Map();  // NEW: Product catalog cache
         this.processedPONumbers = new Set();
         this.lastCacheUpdate = 0;
+        this.catalogCacheExpiry = 0;  // NEW: Separate expiry for catalog
         this.CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
         
         // Initialize mappings
@@ -129,6 +131,80 @@ class FirebaseConfig {
     }
 
     /**
+     * NEW: Load product catalog from Firebase with caching
+     */
+    async loadProductCatalog() {
+        try {
+            console.log('Loading product catalog from Firebase...');
+            
+            const snapshot = await this.db.collection('productCatalog').get();
+            const catalog = new Map();
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                catalog.set(data.sku, data.description);
+            });
+            
+            this.productCatalogCache = catalog;
+            this.catalogCacheExpiry = Date.now() + this.CACHE_DURATION;
+            
+            console.log(`Loaded ${catalog.size} products from catalog`);
+            return catalog;
+        } catch (error) {
+            console.error('Error loading product catalog:', error);
+            return new Map();
+        }
+    }
+
+    /**
+     * NEW: Get product description by SKU (with caching)
+     */
+    async getProductDescription(sku) {
+        try {
+            // Check cache first
+            if (this.productCatalogCache.size > 0 && Date.now() < this.catalogCacheExpiry) {
+                const description = this.productCatalogCache.get(sku);
+                if (description) {
+                    console.log(`Found ${sku} in catalog: ${description.substring(0, 50)}...`);
+                    return description;
+                }
+            }
+            
+            // Reload cache if expired or empty
+            if (this.productCatalogCache.size === 0 || Date.now() >= this.catalogCacheExpiry) {
+                console.log('Reloading product catalog cache...');
+                await this.loadProductCatalog();
+                const description = this.productCatalogCache.get(sku);
+                if (description) {
+                    console.log(`Found ${sku} after cache reload: ${description.substring(0, 50)}...`);
+                    return description;
+                }
+            }
+            
+            console.log(`Product ${sku} not found in catalog, using fallback`);
+            
+            // Fallback to old mapping system
+            const baseCode = sku.replace(/[EKB]$/, ''); // Remove E/K/B suffix
+            if (this.productMappings.has(baseCode)) {
+                return this.productMappings.get(baseCode);
+            }
+            
+            return sku; // Final fallback to SKU itself
+            
+        } catch (error) {
+            console.error('Error fetching product description:', error);
+            
+            // Fallback to old mapping system
+            const baseCode = sku.replace(/[EKB]$/, ''); // Remove E/K/B suffix
+            if (this.productMappings.has(baseCode)) {
+                return this.productMappings.get(baseCode);
+            }
+            
+            return sku; // Final fallback
+        }
+    }
+
+    /**
      * Load processed PO numbers for duplicate detection
      */
     async loadProcessedPONumbers() {
@@ -234,15 +310,29 @@ class FirebaseConfig {
     }
 
     /**
-     * Initialize all data on app startup
+     * Initialize all data on app startup - UPDATED to include product catalog
      */
     async initializeAllData() {
         await Promise.all([
             this.loadCustomerEmailsFromFirestore(),
             this.loadProductConversionsFromFirestore(),
+            this.loadProductCatalog(),  // NEW: Load product catalog
             this.loadProcessedPONumbers()
         ]);
         console.log('All Firebase data loaded successfully');
+    }
+
+    /**
+     * NEW: Initialize product catalog on app start
+     */
+    async initializeProductCatalog() {
+        try {
+            console.log('Initializing product catalog...');
+            await this.loadProductCatalog();
+            console.log('Product catalog ready');
+        } catch (error) {
+            console.error('Failed to initialize product catalog:', error);
+        }
     }
 
     /**
@@ -262,12 +352,13 @@ class FirebaseConfig {
     }
 
     /**
-     * Get all caches for other modules
+     * Get all caches for other modules - UPDATED to include product catalog
      */
     getCaches() {
         return {
             emailMappingsCache: this.emailMappingsCache,
             productConversionsCache: this.productConversionsCache,
+            productCatalogCache: this.productCatalogCache,  // NEW
             processedPONumbers: this.processedPONumbers,
             customerMappings: this.customerMappings,
             productMappings: this.productMappings,
