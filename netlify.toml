@@ -1,9 +1,9 @@
 # Netlify deployment configuration for Email Order Processing System
-# FIXED VERSION - Each redirect needs its own [[redirects]] section
+# CORRECTED - Files are in root directory
 
 [build]
-  # Build settings
-  publish = "email-order-processing"
+  # Build settings - files are in root directory
+  publish = "."
   command = "echo 'No build step required - static files only'"
 
 # Each redirect rule needs its own [[redirects]] section
@@ -44,13 +44,3 @@
   for = "/css/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Functions configuration (if needed in future)
-[functions]
-  directory = "netlify/functions"
-
-# Dev server configuration
-[dev]
-  command = "npx serve ."
-  port = 3000
-  publish = "."
