@@ -1,24 +1,23 @@
 # Netlify deployment configuration for Email Order Processing System
-# This file ensures proper routing and headers for the SPA
+# FIXED VERSION - Each redirect needs its own [[redirects]] section
 
 [build]
   # Build settings
-  publish = "."
+  publish = "email-order-processing"
   command = "echo 'No build step required - static files only'"
 
-# Redirect rules for SPA routing
+# Each redirect rule needs its own [[redirects]] section
 [[redirects]]
-  # Handle settings page
   from = "/customer-email-management.html"
   to = "/settings.html"
   status = 200
 
-  # Handle history page  
+[[redirects]]
   from = "/order-history.html"
   to = "/history.html"
   status = 200
 
-  # Handle any other route - fallback to index
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
@@ -45,11 +44,6 @@
   for = "/css/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Environment variables (set in Netlify dashboard)
-# FIREBASE_API_KEY - Firebase API key
-# FIREBASE_AUTH_DOMAIN - Firebase auth domain
-# FIREBASE_PROJECT_ID - Firebase project ID
 
 # Functions configuration (if needed in future)
 [functions]
