@@ -5,6 +5,7 @@
 
 class UIManager {
     constructor(conversionEngine) {
+        console.log('🔍 TEST: UIManager constructor running');
         this.conversionEngine = conversionEngine;
         
         // State variables
@@ -26,6 +27,7 @@ class UIManager {
         this.queuePersistence = new QueuePersistence();
         
         this.initializeEventListeners();
+        console.log('🔍 TEST: About to call initializeQueuePersistence');
         this.initializeQueuePersistence();
     }
 
@@ -33,6 +35,8 @@ class UIManager {
      * Initialize queue persistence functionality
      */
     async initializeQueuePersistence() {
+        console.log('🔍 TEST: initializeQueuePersistence method called');
+        
         // Setup page refresh warning
         this.setupPageRefreshWarning();
         
