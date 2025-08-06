@@ -245,28 +245,37 @@ class FirebaseConfig {
                             return catalog === 'dill'; // Match plain dill
                         }
                         
-                        // Handle melon sizes - all sizes map to same product
+                        // Handle melon sizes - match MELONS (plural) in catalog
                         if (searchDesc.includes('watermelon')) {
-                            return catalog.includes('watermelon'); // MELW
+                            // Exclude radish watermelon, match only actual melons
+                            return catalog === 'melons watermelon' || (catalog.includes('watermelon') && catalog.includes('melon') && !catalog.includes('radish'));
                         }
                         if (searchDesc.includes('honeydew')) {
-                            return catalog.includes('honeydew'); // MELH
+                            return catalog === 'melons honeydew' || catalog.includes('honeydew');
                         }
                         if (searchDesc.includes('galia')) {
-                            return catalog.includes('galia'); // MELG
+                            return catalog === 'melons galia' || catalog === 'melon galia';
                         }
                         if (searchDesc.includes('cantaloupe')) {
-                            return catalog.includes('cantaloupe'); // MELC
+                            return catalog === 'melons cantaloupe' || catalog === 'melon cantaloupe';
                         }
                         
-                        // Handle grape variations more specifically
-                        // "Grape Red" or "Grapes Red" = Black grapes (GRBS)
-                        if ((searchDesc === 'grape red' || searchDesc.includes('grape red')) && catalog.includes('black')) {
-                            return true;
+                        // Handle grape variations - match GRAPES (plural) in catalog
+                        // "Grape Red" or "Grapes Red" = GRAPES BLACK (GRBS)
+                        if ((searchDesc.includes('grape red') || searchDesc.includes('grapes red'))) {
+                            return catalog === 'grapes black' || catalog === 'grapes red';
                         }
-                        // "Grape Green" or "Grape Green Seedless" = White grapes (GRWS)
-                        if ((searchDesc.includes('grape green') || searchDesc.includes('grapes green')) && catalog.includes('white')) {
-                            return true;
+                        // "Grape Black" = GRAPES BLACK (GRBS)
+                        if (searchDesc.includes('grape black') || searchDesc.includes('grapes black')) {
+                            return catalog === 'grapes black';
+                        }
+                        // "Grape Green" or "Grape Green Seedless" = GRAPES WHITE (GRWS)
+                        if ((searchDesc.includes('grape green') || searchDesc.includes('grapes green'))) {
+                            return catalog === 'grapes white' || catalog === 'grapes green';
+                        }
+                        // "Grape White" = GRAPES WHITE (GRWS)
+                        if (searchDesc.includes('grape white') || searchDesc.includes('grapes white')) {
+                            return catalog === 'grapes white';
                         }
                         
                         // Handle specific mappings for your catalog
