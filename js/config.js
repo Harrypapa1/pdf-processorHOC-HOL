@@ -245,6 +245,30 @@ class FirebaseConfig {
                             return catalog === 'dill'; // Match plain dill
                         }
                         
+                        // Handle melon sizes - all sizes map to same product
+                        if (searchDesc.includes('watermelon')) {
+                            return catalog.includes('watermelon'); // MELW
+                        }
+                        if (searchDesc.includes('honeydew')) {
+                            return catalog.includes('honeydew'); // MELH
+                        }
+                        if (searchDesc.includes('galia')) {
+                            return catalog.includes('galia'); // MELG
+                        }
+                        if (searchDesc.includes('cantaloupe')) {
+                            return catalog.includes('cantaloupe'); // MELC
+                        }
+                        
+                        // Handle grape variations more specifically
+                        // "Grape Red" or "Grapes Red" = Black grapes (GRBS)
+                        if ((searchDesc === 'grape red' || searchDesc.includes('grape red')) && catalog.includes('black')) {
+                            return true;
+                        }
+                        // "Grape Green" or "Grape Green Seedless" = White grapes (GRWS)
+                        if ((searchDesc.includes('grape green') || searchDesc.includes('grapes green')) && catalog.includes('white')) {
+                            return true;
+                        }
+                        
                         // Handle specific mappings for your catalog
                         if (searchDesc.includes('kiwi')) return catalog === 'kiwi';
                         if (searchDesc.includes('mango')) return catalog === 'mango';
@@ -270,6 +294,11 @@ class FirebaseConfig {
                             return false;
                         }
                         
+                        // Skip if it's a melon or grape query - handled in simple strategy
+                        if (searchDesc.includes('melon') || searchDesc.includes('grape')) {
+                            return false;
+                        }
+                        
                         const keywords = searchDesc.split(/\s+/).filter(word => word.length > 2);
                         const matches = keywords.filter(keyword => catalog.includes(keyword));
                         
@@ -283,11 +312,8 @@ class FirebaseConfig {
                     name: 'partial',
                     test: (catalogDesc) => {
                         const catalog = catalogDesc.toLowerCase();
-                        // Only for very specific cases
-                        if (searchDesc.includes('watermelon') && catalog.includes('watermelon')) return true;
-                        if (searchDesc.includes('honeydew') && catalog.includes('honeydew')) return true;
-                        if (searchDesc.includes('cantaloupe') && catalog.includes('cantaloupe')) return true;
-                        if (searchDesc.includes('galia') && catalog.includes('galia')) return true;
+                        // Only for very specific cases not covered above
+                        // (melons are now handled in simple strategy)
                         return false;
                     }
                 }
